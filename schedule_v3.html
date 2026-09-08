@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time schedules — Web Configurator (v3)</title>
+<style>
+/* ────────────────────────────────────────────────────────────────
+   Design tokens (subset of the Axxon One "one-*" token set)
+   ──────────────────────────────────────────────────────────────── */
+:root,[data-scheme=light]{
+  color-scheme:light;
+  --fg-default:#4b4c53; --fg-muted:#7b7c85; --fg-subtle:#9a9aa2; --fg-disabled:#a0aec0;
+  --bg-canvas:#f7f7f7; --bg-surface:#fff; --bg-muted:#f2f3f5; --bg-subtle:#e9ebf2; --bg-popup:#fff;
+  --border-default:#d6dae3; --border-strong:#a0aec0; --border-popup:#d6d6d6;
+  --control-bg:#e9ebf2; --control-hover:#f2f3f5; --control-selected:#e3e7ef;
+  --accent:#0070e4; --accent-hover:#0189ff; --accent-pressed:#0053a8; --accent-on:#fff; --accent-soft:#d9ecff;
+  --accent-half:#7fb5e8;
+  --status-info:#0070e4; --status-warning:#ff8a00; --status-success:#20d300; --danger:#e01b24;
+  --fb-info:#0070e41f; --fb-warning:#ff8a001f; --fb-success:#20d3001f; --fb-danger:#f0000f14;
+  --grid-line:#e2e5ec; --grid-line-strong:#c9ced9; --track-bg:#fbfbfc;
+  --scrim:#00000052; --shadow-popup:0 4px 12px #0000002e; --shadow-dialog:0 8px 28px #00000040;
+}
+[data-scheme=dark]{
+  color-scheme:dark;
+  --fg-default:#f6f6f6; --fg-muted:#b3b3b8; --fg-subtle:#858585; --fg-disabled:#858585;
+  --bg-canvas:#121212; --bg-surface:#191919; --bg-muted:#1f1f1f; --bg-subtle:#2a2a2a; --bg-popup:#2a2a2a;
+  --border-default:#333; --border-strong:#656565; --border-popup:#3d3d3d;
+  --control-bg:#3d3d3d; --control-hover:#484848; --control-selected:#4a4a4a;
+  --accent:#0070e4; --accent-hover:#0082f7; --accent-pressed:#0053a8; --accent-on:#fff; --accent-soft:#004184;
+  --accent-half:#12558f;
+  --status-info:#0070e4; --status-warning:#ff8a00; --status-success:#20d300; --danger:#ff5a5a;
+  --fb-info:#0070e433; --fb-warning:#ff8a0033; --fb-success:#20d30033; --fb-danger:#ff000033;
+  --grid-line:#2c2c2c; --grid-line-strong:#3d3d3d; --track-bg:#161616;
+  --scrim:#0009; --shadow-popup:0 4px 12px #0000006b; --shadow-dialog:0 8px 28px #000000a6;
+}
+:root{
+  --r-xs:2px; --r-ctl:4px; --r-box:6px; --r-win:8px; --r-pill:999px;
+  --fs-cap:9px; --fs-body:11px; --fs-ctl:12px; --fs-h3:14px; --fs-h2:16px;
+  --font:Inter,Roboto,"Segoe UI",system-ui,sans-serif;
+  --mono:"Roboto Mono",Consolas,ui-monospace,monospace;
+  --ruler-w:196px;      /* checkbox + day name + gutter */
+  --side-w:32px;        /* right gutter (kebab) */
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg-canvas);color:var(--fg-default);font-family:var(--font);font-size:var(--fs-ctl);-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+::selection{background:var(--accent-soft)}
+
+/* ── generic controls ─────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:28px;padding:0 10px;
+  border:1px solid transparent;border-radius:var(--r-ctl);background:var(--control-bg);color:var(--fg-default);
+  font-size:var(--fs-ctl);cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--control-hover)}
+.btn:active{transform:translateY(.5px)}
+.btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+.btn--primary{background:var(--accent);color:var(--accent-on)}
+.btn--primary:hover{background:var(--accent-hover)}
+.btn--outline{background:transparent;border-color:var(--border-strong)}
+.btn--outline:hover{background:var(--control-hover)}
+.btn--subtle{background:transparent}
+.btn--subtle:hover{background:var(--control-hover)}
+.btn--danger{background:transparent;border-color:var(--border-strong);color:var(--danger)}
+.btn--danger:hover{background:var(--fb-danger)}
+.btn--sm{height:24px;padding:0 8px;font-size:var(--fs-body)}
+.btn--icon{width:26px;padding:0;flex:none}
+.btn--on{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:var(--r-ctl);overflow:hidden;height:28px}
+.seg button{height:100%;padding:0 10px;border:0;background:transparent;color:var(--fg-muted);font-size:var(--fs-ctl);cursor:pointer}
+.seg button+button{border-left:1px solid var(--border-strong)}
+.seg button:hover{background:var(--control-hover)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-on)}
+.inp{height:28px;padding:0 8px;border:1px solid var(--border-strong);border-radius:var(--r-ctl);
+  background:var(--bg-surface);color:var(--fg-default);font-size:var(--fs-ctl);font-family:inherit;width:100%}
+.inp:focus{outline:none;border-color:var(--accent-hover);box-shadow:0 0 0 1px var(--accent-hover)}
+.inp--time{width:88px;font-variant-numeric:tabular-nums}
+.inp--sm{height:24px;font-size:var(--fs-body)}
+select.inp{cursor:pointer}
+.lbl{display:block;font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle);margin-bottom:3px}
+.pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 10px;border-radius:var(--r-pill);
+  background:var(--bg-subtle);font-size:var(--fs-body);font-weight:600;white-space:nowrap}
+.pill--live{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.pill--idle{background:transparent;border:1px solid var(--border-default);color:var(--fg-muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border:1px solid var(--border-default);
+  border-radius:var(--r-ctl);background:var(--bg-surface);font-size:var(--fs-body);white-space:nowrap}
+.tog{height:26px;padding:0 9px;border:1px solid var(--border-strong);border-radius:var(--r-ctl);
+  background:transparent;color:var(--fg-muted);font-size:var(--fs-body);cursor:pointer}
+.tog[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
+.muted{color:var(--fg-muted)}
+kbd{display:inline-block;min-width:16px;padding:0 4px;border:1px solid var(--border-strong);border-bottom-width:2px;
+  border-radius:3px;background:var(--bg-muted);font:inherit;font-size:var(--fs-cap);line-height:15px;text-align:center}
+.subtle{color:var(--fg-subtle)}
+.hint{font-size:var(--fs-body);color:var(--fg-muted);line-height:1.5}
+.row{display:flex;align-items:center;gap:8px}
+.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.sep{height:1px;background:var(--border-default);border:0;margin:0}
+
+/* ── shell ────────────────────────────────────────────────────── */
+.appbar{display:flex;align-items:center;gap:16px;height:44px;padding:0 16px;background:var(--bg-surface);
+  border-bottom:1px solid var(--border-default)}
+.appbar .brand{font-size:var(--fs-h3);font-weight:700;letter-spacing:-.01em}
+.tabs{display:flex;gap:2px;overflow:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{height:44px;padding:0 12px;border:0;background:transparent;color:var(--fg-muted);
+  font-size:var(--fs-ctl);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button:hover{color:var(--fg-default)}
+.tabs button[aria-current=page]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.langsel{height:28px;padding:0 24px 0 8px;border:1px solid var(--border-strong);border-radius:var(--r-ctl);
+  background:var(--bg-surface) no-repeat right 7px center;color:var(--fg-default);font-family:inherit;
+  font-size:var(--fs-ctl);cursor:pointer;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 12px) 12px,calc(100% - 8px) 12px;background-size:4px 4px,4px 4px}
+.langsel:focus{outline:none;border-color:var(--accent-hover);box-shadow:0 0 0 1px var(--accent-hover)}
+.shell{display:flex;align-items:stretch;height:calc(100vh - 44px);overflow:hidden}
+
+/* ── left: schedule list ─────────────────────────────────────── */
+.side{width:268px;flex:none;background:var(--bg-surface);border-right:1px solid var(--border-default);
+  display:flex;flex-direction:column;min-height:0}
+.side__head{padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px}
+.side__title{font-size:var(--fs-h3);font-weight:600}
+.side__list{flex:1;overflow:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:3px}
+.sched{position:relative;padding:8px 26px 8px 10px;border:1px solid transparent;border-radius:var(--r-box);cursor:pointer}
+.sched:hover{background:var(--control-hover)}
+.sched[aria-selected=true]{background:var(--control-selected);border-color:var(--accent)}
+.sched__name{font-size:var(--fs-ctl);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sched__strip{display:flex;flex-direction:column;gap:2px;margin:7px 0 6px}
+.sched__strip i{height:3px;border-radius:1px;background-color:var(--bg-subtle)}
+.sched__meta{font-size:var(--fs-body);color:var(--fg-muted)}
+.sched__kebab{position:absolute;top:6px;right:4px;opacity:0}
+.sched:hover .sched__kebab,.sched[aria-selected=true] .sched__kebab{opacity:1}
+
+/* ── centre: editor ───────────────────────────────────────────── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto}
+.editor{padding:14px 18px 24px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box)}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;
+  background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box)}
+.tbsep{width:1px;align-self:stretch;background:var(--border-default);margin:0 2px}
+
+/* grid */
+.grid{border:1px solid var(--border-default);border-radius:var(--r-box);overflow:hidden;background:var(--bg-surface);user-select:none}
+.ruler{display:flex;background:var(--bg-muted);border-bottom:1px solid var(--border-default)}
+.ruler__pad{width:var(--ruler-w);flex:none;display:flex;align-items:center;padding-left:10px;
+  font-size:var(--fs-cap);letter-spacing:.05em;text-transform:uppercase;color:var(--fg-subtle)}
+.ruler__cells{flex:1;display:flex;min-width:0}
+.ruler__cells span{flex:1;text-align:center;font-size:var(--fs-cap);color:var(--fg-muted);
+  padding:4px 0;border-left:1px solid var(--grid-line);font-variant-numeric:tabular-nums}
+.ruler__end{width:var(--side-w);flex:none;border-left:1px solid var(--grid-line)}
+.drow{display:flex;align-items:stretch;border-top:1px solid var(--border-default)}
+.drow:first-of-type{border-top:0}
+.drow--dim{opacity:.42}
+.drow--today .dday{font-weight:700;color:var(--fg-default)}
+.drow--focus .dchk{box-shadow:inset 3px 0 0 var(--accent)}
+.drow--focus .dday,.drow--focus .dsum{color:var(--accent);background:var(--fb-info)}
+.drow--focus .dchk{background:var(--fb-info)}
+.dchk{width:30px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg-muted);
+  border-right:1px solid var(--grid-line)}
+.dday{width:98px;flex:none;display:flex;align-items:center;padding-left:10px;font-size:var(--fs-ctl);
+  color:var(--fg-muted);background:var(--bg-muted);cursor:pointer}
+.dsum{width:68px;flex:none;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;
+  font-size:var(--fs-body);color:var(--fg-muted);background:var(--bg-muted);border-right:1px solid var(--grid-line);
+  font-variant-numeric:tabular-nums}
+.track{flex:1;min-width:0;height:38px;position:relative;background:var(--track-bg);cursor:crosshair;
+  background-image:repeating-linear-gradient(to right,var(--grid-line) 0,var(--grid-line) 1px,transparent 1px,transparent calc(100%/24))}
+.track--erase{cursor:cell}
+.dmenu{width:var(--side-w);flex:none;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--grid-line)}
+.blk{position:absolute;top:4px;bottom:4px;border-radius:var(--r-ctl);background:var(--accent);color:var(--accent-on);
+  display:flex;align-items:center;justify-content:center;font-size:var(--fs-body);font-variant-numeric:tabular-nums;
+  overflow:hidden;white-space:nowrap;cursor:grab;box-shadow:inset 0 0 0 1px #ffffff26}
+.blk--sel{box-shadow:0 0 0 2px var(--bg-surface),0 0 0 4px var(--fg-default);z-index:6}
+.blk--cyc{background:repeating-linear-gradient(115deg,var(--accent) 0 7px,var(--accent-pressed) 7px 12px)}
+.blk--cont{background:repeating-linear-gradient(45deg,var(--accent) 0 6px,color-mix(in srgb,var(--accent) 55%,transparent) 6px 12px);
+  cursor:pointer;opacity:.85}
+.blk__h{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
+.blk__h--l{left:0} .blk__h--r{right:0}
+.ghost{position:absolute;top:4px;bottom:4px;border-radius:var(--r-ctl);background:var(--accent-soft);
+  border:1px dashed var(--accent);z-index:7;pointer-events:none;display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-body);color:var(--accent);font-variant-numeric:tabular-nums}
+.ghost--erase{background:var(--fb-danger);border-color:var(--danger);color:var(--danger)}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--status-warning);z-index:8;pointer-events:none}
+.nowline::before{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--status-warning)}
+
+/* selection bar */
+.selbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;background:var(--bg-subtle);
+  border-radius:var(--r-box);border:1px solid transparent}
+.selbar--multi{border-color:var(--accent)}
+
+/* accordions */
+.acc{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box);overflow:hidden}
+.acc+.acc{margin-top:8px}
+.acc__sum{display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 12px;border:0;background:transparent;
+  color:var(--fg-default);font-size:var(--fs-ctl);font-weight:600;cursor:pointer;text-align:left}
+.acc__sum:hover{background:var(--control-hover)}
+.acc__sum .caret{transition:transform .12s;flex:none;color:var(--fg-muted)}
+.acc[data-open=true] .caret{transform:rotate(90deg)}
+.acc__body{padding:4px 12px 14px;border-top:1px solid var(--border-default)}
+.acc[data-open=false] .acc__body{display:none}
+.grpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:10px}
+.grp{border:1px solid var(--border-default);border-radius:var(--r-box);padding:9px 10px}
+.grp h4{margin:0 0 6px;font-size:var(--fs-body);text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle);font-weight:600}
+table.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-body)}
+table.tbl th{text-align:left;font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.04em;
+  color:var(--fg-subtle);font-weight:600;padding:4px 6px}
+table.tbl td{padding:3px 6px;border-top:1px solid var(--grid-line);vertical-align:middle}
+pre.json{margin:0;max-height:230px;overflow:auto;background:var(--bg-muted);border:1px solid var(--border-default);
+  border-radius:var(--r-ctl);padding:10px;font-family:var(--mono);font-size:var(--fs-body);line-height:1.55}
+
+/* ── right: day inspector ─────────────────────────────────────── */
+.insp{width:306px;flex:none;background:var(--bg-surface);border-left:1px solid var(--border-default);
+  display:flex;flex-direction:column;min-height:0;overflow:auto}
+.insp__head{padding:13px 14px 10px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--border-default)}
+.insp__title{font-size:var(--fs-h3);font-weight:600}
+.insp__sec{padding:11px 14px;border-bottom:1px solid var(--border-default);display:flex;flex-direction:column;gap:8px}
+.ivrow{display:flex;align-items:center;gap:6px}
+.ivrow__dur{width:62px;flex:none;text-align:right;font-size:var(--fs-body);color:var(--fg-muted);font-variant-numeric:tabular-nums}
+.daychips{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.daychk{display:flex;align-items:center;gap:6px;font-size:var(--fs-body);cursor:pointer}
+
+/* ── overlays ─────────────────────────────────────────────────── */
+.pop{position:fixed;z-index:60;background:var(--bg-popup);border:1px solid var(--border-popup);
+  border-radius:var(--r-box);box-shadow:var(--shadow-popup);padding:6px;min-width:184px}
+.pop__item{display:flex;align-items:center;gap:8px;width:100%;height:26px;padding:0 8px;border:0;background:transparent;
+  color:var(--fg-default);font-size:var(--fs-ctl);text-align:left;cursor:pointer;border-radius:var(--r-ctl)}
+.pop__item:hover{background:var(--control-hover)}
+.pop__item--danger{color:var(--danger)}
+.pop__cap{padding:5px 8px 3px;font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle)}
+.pop__bar{width:46px;height:8px;border-radius:2px;flex:none;background-color:var(--bg-subtle)}
+.scrim{position:fixed;inset:0;z-index:55}
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:var(--scrim)}
+.modal__box{width:392px;max-width:calc(100vw - 32px);background:var(--bg-popup);border-radius:var(--r-win);
+  box-shadow:var(--shadow-dialog);overflow:hidden}
+.modal__t{padding:14px 16px 0;font-size:var(--fs-h3);font-weight:600}
+.modal__c{padding:8px 16px 16px;font-size:var(--fs-ctl);color:var(--fg-muted);line-height:1.55}
+.modal__a{display:flex;justify-content:flex-end;gap:8px;padding:0 16px 16px}
+.toasts{position:fixed;top:56px;right:16px;z-index:90;display:flex;flex-direction:column;gap:8px;width:352px}
+.toast{display:flex;gap:9px;padding:9px 11px;border-radius:var(--r-box);border:1px solid;font-size:var(--fs-body);
+  line-height:1.5;box-shadow:var(--shadow-popup);background:var(--bg-surface)}
+.toast--success{border-color:var(--status-success);background:var(--fb-success)}
+.toast--info{border-color:var(--status-info);background:var(--fb-info)}
+.toast--warning{border-color:var(--status-warning);background:var(--fb-warning)}
+.toast--danger{border-color:var(--danger);background:var(--fb-danger)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:1280px){.insp{width:264px}.side{width:230px}}
+</style>
+</head>
+<body data-scheme="light">
+
+<div class="appbar" id="appbar"></div>
+<div class="shell" id="shell"></div>
+<div class="toasts" id="toasts"></div>
+<div id="overlays"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Time schedules — final prototype (v3)
+
+   Merges: prototype 1 (design-system driven editor, presets, multi-day
+   editing, impact analysis), prototype 2 (draw/erase painting, snap step,
+   undo/redo, per-day totals, day inspector) and the desktop Axxon One /
+   Intellect feature set (interval table, cross-midnight intervals, cyclic
+   intervals, holidays and exception dates, validity period).
+
+   Interval model mirrors the server payload observed in the web
+   configurator: start (h/m/s) + length_seconds + period_seconds.
+   Internally: { id, start (min from 00:00), len (min), cyc: null | {every, on} }
+   `start + len > 1440` means the interval carries over into the next day.
+   ═══════════════════════════════════════════════════════════════ */
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_ISO  = {Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7};
+const DAY_MIN  = 1440;
+let uid = 1; const nid = p => (p||'i') + (uid++);
+
+/* ══ i18n ═══════════════════════════════════════════════════════
+   Dictionary values are either strings or functions of a params
+   object. Demo content (schedule names, "used in" items, exception
+   notes) is stored as *keys* — so switching the language relabels the
+   sample data without touching anything the user has renamed.
+   ═══════════════════════════════════════════════════════════════ */
+const LANGS = [{ id:'en', label:'English' }, { id:'ru', label:'Русский' }];
+/** Russian plural picker: 1 день / 2 дня / 5 дней. */
+const pl = (n, one, few, many) => {
+  const a = n % 10, b = n % 100;
+  return a === 1 && b !== 11 ? one : (a >= 2 && a <= 4 && (b < 10 || b >= 20) ? few : many);
+};
+const I18N = {
+en: {
+  /* chrome */
+  brand:'Web Configurator', navAria:'Configurator sections',
+  navDevices:'Devices', navGroups:'Groups', navDetectors:'Detectors', navArchives:'Archives',
+  navRoles:'Roles & users', navSchedules:'Time schedules', navMacros:'Macros', navAudit:'Audit log', navSettings:'Settings',
+  langAria:'Interface language', fmtAria:'Time format', h24:'24 h', h12:'12 h',
+  themeTitle:'Toggle light / dark theme', themeAria:'Toggle theme',
+  /* days */
+  day_Mon:'Monday', day_Tue:'Tuesday', day_Wed:'Wednesday', day_Thu:'Thursday', day_Fri:'Friday', day_Sat:'Saturday', day_Sun:'Sunday',
+  ds_Mon:'Mon', ds_Tue:'Tue', ds_Wed:'Wed', ds_Thu:'Thu', ds_Fri:'Fri', ds_Sat:'Sat', ds_Sun:'Sun',
+  /* Grammatical cases — English needs none, Russian does (see the ru block). */
+  da_Mon:'Monday', da_Tue:'Tuesday', da_Wed:'Wednesday', da_Thu:'Thursday', da_Fri:'Friday', da_Sat:'Saturday', da_Sun:'Sunday',
+  dIn_Mon:'on Monday', dIn_Tue:'on Tuesday', dIn_Wed:'on Wednesday', dIn_Thu:'on Thursday',
+  dIn_Fri:'on Friday', dIn_Sat:'on Saturday', dIn_Sun:'on Sunday',
+  dFrom_Mon:'from Monday', dFrom_Tue:'from Tuesday', dFrom_Wed:'from Wednesday', dFrom_Thu:'from Thursday',
+  dFrom_Fri:'from Friday', dFrom_Sat:'from Saturday', dFrom_Sun:'from Sunday',
+  unitH:'h', unitMin:'min', zeroMin:'0 min', hour1:'1 h',
+  /* sidebar */
+  sideTitle:'Time schedules',
+  sideNote:'Reusable weekly patterns — <b>not</b> UTC offsets. Assign them to archive recording, roles, macros, export and replication.',
+  searchPh:'Search schedules', schedulesAria:'Schedules', newSchedule:'＋ New schedule',
+  noMatches:'No schedules match the search.', activeRightNow:'Active right now',
+  perWeek:p => `${p.d} / week`, usesN:p => `${p.n} use${p.n === 1 ? '' : 's'}`,
+  schedActionsAria:'Schedule actions', importJson:'Import JSON', exportJson:'Export JSON',
+  /* header */
+  nameAria:'Schedule name', coverageTitle:'Effective coverage per week',
+  coverage:p => `${p.d} / week · ${p.pct}%`,
+  activeNow:'● Active now', inactiveNow:'○ Inactive now', unsaved:'Unsaved changes',
+  btnDelete:'Delete', btnCancel:'Cancel', btnSave:'Save',
+  /* toolbar */
+  toolAria:'Editing tool', draw:'✎ Draw', erase:'⌫ Erase',
+  undoTitle:'Undo (Ctrl+Z)', redoTitle:'Redo (Ctrl+Shift+Z)',
+  snap:'Snap', snapAria:'Snap step', templates:'Templates ▾',
+  invert:'Invert', invertTitle:'Swap active and inactive time',
+  clearWeekBtn:'Clear week', clearCheckedBtn:'Clear checked days',
+  scopeHint:p => `Templates, Invert and Clear apply to the <b>${p.n} checked day${p.n === 1 ? '' : 's'}</b>`,
+  scopeHintNone:'Check day boxes to scope bulk actions',
+  /* grid */
+  rulerPad:'Day / total', selectDayAria:p => `Select ${p.day} for bulk editing`,
+  today:'TODAY', coveredTitle:'Time covered on this calendar day',
+  timelineAria:p => `${p.day} timeline`, dayActionsAria:p => `${p.day} actions`, nowTitle:p => `Now ${p.t}`,
+  gridHint:p => `Drag on empty track to paint an interval · drag a block to move it · drag its edges to resize (snaps to ${p.step}) · double-click a block to open it · <kbd>Del</kbd> removes the selected block · <kbd>←</kbd>/<kbd>→</kbd> nudge it.`,
+  cycTitle:p => ` · ${p.on} min every ${p.every} min`, cycBlk:p => ` ↻ ${p.on}/${p.every} min`,
+  continuesFrom:p => ` (continues ${p.from})`,
+  /* selection bar */
+  daysChecked:p => `${p.n} day${p.n === 1 ? '' : 's'} checked`,
+  scopeNote:p => `${p.list} — bulk actions target these days only`,
+  copyFromDay:'Copy from day…', clearChecked:'Clear checked', uncheckAll:'Uncheck all',
+  selHint:'Select a block on the grid, or edit the focused day in the panel on the right.',
+  from:'From', to:'To', duration:'Duration', crossesMidnight:' · crosses midnight',
+  cyclic:'Cyclic', cycOnLbl:'on', cycEveryLbl:'min every', minSuffix:'min',
+  copyIntervalTo:'Copy interval to…', deleteInterval:'Delete interval',
+  /* used in */
+  usedIn:'Used in', placesN:p => `${p.n} place${p.n === 1 ? '' : 's'}`,
+  grpArchive:'Archive recording', grpRoles:'Roles & permissions', grpMacros:'Macros',
+  grpExport:'Video export', grpRepl:'Replication', notUsed:'Not used',
+  usedInNote:'Deleting or narrowing a schedule affects every object listed here. The configurator warns you before deleting and lists the impacted objects.',
+  /* exceptions */
+  excTitle:'Exceptions & holidays',
+  rulesN:p => `${p.n} rule${p.n === 1 ? '' : 's'}`, plusHolidayList:' + holiday list',
+  excMode_none:'Non-working (no intervals)', excMode_full:'Active 24 hours',
+  excMode_sameAs:'Same as weekday…', excMode_custom:'Custom intervals',
+  excNote:'Exception dates override the weekly pattern — holidays, shortened pre-holiday days, planned maintenance. A date range covers every day inside it.',
+  thFrom:'From', thTo:'To', thBehaviour:'Behaviour', thDetails:'Details', thRepeat:'Repeat', thComment:'Comment',
+  yearly:'yearly', commentPh:'Comment', removeExcAria:'Remove exception',
+  noExc:'No exception dates.', addException:'＋ Add exception',
+  holidayListLabel:'Also apply the server-wide holiday list',
+  /* advanced */
+  advTitle:'Validity, recurrence & advanced', configured:'configured', defaults:'defaults',
+  validityPeriod:'Validity period', validFrom:'Valid from', validTo:'Valid to',
+  validityNote:'Empty = always valid. Outside the period the schedule is inactive.',
+  recurrence:'Recurrence', repeatEveryN:'Repeat every N days (instead of weekly)',
+  recurrenceNote:'0 = the standard 7-day week. Any other value repeats the Monday row every N days counting from <i>Valid from</i> (shift patterns such as 2/2 or 4/4).',
+  referenceTime:'Reference time',
+  referenceNote:'Times are stored as offsets inside the week and evaluated in the <b>server’s local time</b>, so a DST change shifts the wall-clock window, not the offset. Add an exception date if a specific transition day must be handled differently.',
+  audit:'Audit', lastModified:'Last modified', identifier:'Identifier', justNowYou:'just now · you',
+  /* api */
+  apiTitle:'API payload preview', intervalsN:p => `${p.n} interval${p.n === 1 ? '' : 's'}`,
+  apiNote:'Read-only preview of the request the editor would send on Save — matches the <code>added / modified / removed_intervals</code> shape with <code>start</code>, <code>length_seconds</code> and <code>period_seconds</code> used by the configurator API.',
+  /* inspector */
+  inspMeta:p => `${p.n} interval${p.n === 1 ? '' : 's'} defined · ${p.own} owned · <b>${p.cov}</b> covered on this day`,
+  plusCarryOver:p => `↳ plus carry-over ${p.from}`,
+  quickFill:'Quick fill', allDay:'All day', invertDay:'Invert day', clear:'Clear',
+  intervals:'Intervals', noIntervals:'No intervals — the schedule is inactive all day.',
+  addInterval:'＋ Add interval', startAria:'Start', endAria:'End',
+  cycOnTitle:p => `Cyclic: ${p.on} min every ${p.every} min — click to make continuous`,
+  cycOffTitle:'Make cyclic', delIntervalAria:'Delete interval',
+  continuesTo:p => `↳ continues to ${p.t} ${p.dIn}`,
+  copyDayTo:p => `Copy ${p.day} to`, selectAll:'Select all', monFri:'Mon–Fri',
+  merge:'Merge', replace:'Replace',
+  copyModeNote:'<b>Replace</b> overwrites the target days, <b>Merge</b> adds these intervals to what is already there.',
+  /* popovers */
+  applyTemplate:'Apply template', fill24:'Fill 24 hours', openInInspector:'Open in inspector',
+  clearDay:'Clear day', duplicate:'Duplicate', exportThis:'Export this schedule', deleteEllipsis:'Delete…',
+  copyFrom:'Copy from', copyThisIntervalTo:'Copy this interval to', allOtherDays:'All other days',
+  /* dialogs & toasts */
+  lastScheduleWarn:'At least one schedule must remain.',
+  delSchedTitle:'Delete schedule?',
+  delSchedRefs:p => `“${p.name}” is referenced in <b>${p.n} place${p.n === 1 ? '' : 's'}</b> (roles, macros, archive recording, export, replication). Those objects will fall back to <i>Never</i> until you assign another schedule.`,
+  delSchedNoRefs:p => `“${p.name}” is not referenced anywhere. This cannot be undone.`,
+  deletedRefs:p => `“${p.name}” deleted — ${p.n} object${p.n === 1 ? '' : 's'} left without a schedule.`,
+  deleted:p => `“${p.name}” deleted.`,
+  applyTplTitle:'Apply template?',
+  applyTplScoped:p => `Replace the contents of the <b>${p.n} checked day${p.n === 1 ? '' : 's'}</b> with “${p.tpl}”?`,
+  applyTplWhole:p => `Replace the <b>whole week</b> of “${p.name}” with “${p.tpl}”?`,
+  btnApply:'Apply',
+  clearTitle:'Clear intervals?',
+  clearScoped:p => `Clear the ${p.n} checked day${p.n === 1 ? '' : 's'}?`,
+  clearWhole:'Clear the entire week?', btnClear:'Clear',
+  dayCopied:p => `${p.day} copied to ${p.n} day${p.n === 1 ? '' : 's'}.`,
+  ivCopied:p => `Interval copied to ${p.n} day${p.n === 1 ? '' : 's'}.`,
+  savedToast:'Schedule saved. Assigned objects pick up the new pattern immediately.',
+  savedShort:'Schedule saved.',
+  discardTitle:'Discard changes?', discardMsg:'All edits made since the last save will be lost.',
+  btnDiscard:'Discard', discardedToast:'Changes discarded.',
+  switchTitle:'Discard unsaved changes?',
+  switchMsg:'The current schedule has unsaved changes. Switching will keep them in the editor — save or cancel first to be safe.',
+  btnSwitch:'Switch anyway',
+  exportToast:'Export prepared — the configurator downloads the schedule set as a JSON file.',
+  importToast:'Import opens a file picker and validates the JSON against the interval schema.',
+  checkTargetWarn:'Check at least one target day first.',
+  newScheduleName:'New schedule', copySuffix:'(copy)',
+  /* templates */
+  tpl_biz:'Business hours',        tplN_biz:'Mon–Fri 09:00–18:00',
+  tpl_ext:'Extended office',       tplN_ext:'Mon–Fri 07:00–21:00',
+  tpl_shift2:'Two shifts',         tplN_shift2:'Mon–Fri 06:00–14:00 + 14:00–22:00',
+  tpl_night:'Nights',              tplN_night:'Daily 22:00–06:00 (+1 d)',
+  tpl_nonwork:'Non-working hours', tplN_nonwork:'Mon–Fri 18:00–09:00 + weekends',
+  tpl_wknd:'Weekends',             tplN_wknd:'Sat–Sun all day',
+  tpl_always:'24 / 7',             tplN_always:'Every day, all day',
+  tpl_motion:'Cyclic sampling',    tplN_motion:'Daily 5 min every 30 min',
+  /* demo content */
+  sc_biz:'Business hours', sc_night:'Night shift', sc_wknd:'Weekend patrol',
+  sc_server:'Server room 24/7', sc_cyc:'Archive sampling (cyclic)',
+  u_opDay:'Operators — day shift', u_front:'Front desk', u_guardNight:'Security guards — night',
+  u_wkndTeam:'Weekend patrol team',
+  u_armPerim:'Arm perimeter outside hours', u_lockDoors:'Lock all doors after hours',
+  u_smsBreach:'SMS alert on breach', u_patrolRem:'Enable patrol reminders',
+  u_restartRec:'Restart recording service nightly',
+  u_lobby1:'Lobby cam 1 — constant recording', u_lobby2:'Lobby cam 2 — constant recording',
+  u_perim38:'Perimeter cam 3–8', u_serverCam:'Server room cam', u_parkSampling:'Parking lot cam — sampling',
+  u_lobbyExp:'Daily lobby export', u_wkndExp:'Weekend incident export', u_serverExp:'Server room continuous export',
+  u_dr1:'Backup site DR-1', u_mirror4:'Offsite mirror — Rack 4',
+  ex_nye:'New Year’s Eve', ex_nyHol:'New Year holidays'
+},
+ru: {
+  brand:'Веб-конфигуратор', navAria:'Разделы конфигуратора',
+  navDevices:'Устройства', navGroups:'Группы', navDetectors:'Детекторы', navArchives:'Архивы',
+  navRoles:'Роли и пользователи', navSchedules:'Временные расписания', navMacros:'Макрокоманды',
+  navAudit:'Системный журнал', navSettings:'Настройки',
+  langAria:'Язык интерфейса', fmtAria:'Формат времени', h24:'24 ч', h12:'12 ч',
+  themeTitle:'Переключить светлую / тёмную тему', themeAria:'Переключить тему',
+  day_Mon:'Понедельник', day_Tue:'Вторник', day_Wed:'Среда', day_Thu:'Четверг',
+  day_Fri:'Пятница', day_Sat:'Суббота', day_Sun:'Воскресенье',
+  ds_Mon:'Пн', ds_Tue:'Вт', ds_Wed:'Ср', ds_Thu:'Чт', ds_Fri:'Пт', ds_Sat:'Сб', ds_Sun:'Вс',
+  /* винительный: «копировать среду» */
+  da_Mon:'понедельник', da_Tue:'вторник', da_Wed:'среду', da_Thu:'четверг',
+  da_Fri:'пятницу', da_Sat:'субботу', da_Sun:'воскресенье',
+  /* с предлогом: «во вторник», «в среду» */
+  dIn_Mon:'в понедельник', dIn_Tue:'во вторник', dIn_Wed:'в среду', dIn_Thu:'в четверг',
+  dIn_Fri:'в пятницу', dIn_Sat:'в субботу', dIn_Sun:'в воскресенье',
+  /* родительный с предлогом: «со вторника», «с воскресенья» */
+  dFrom_Mon:'с понедельника', dFrom_Tue:'со вторника', dFrom_Wed:'со среды', dFrom_Thu:'с четверга',
+  dFrom_Fri:'с пятницы', dFrom_Sat:'с субботы', dFrom_Sun:'с воскресенья',
+  unitH:'ч', unitMin:'мин', zeroMin:'0 мин', hour1:'1 ч',
+  sideTitle:'Временные расписания',
+  sideNote:'Многократно используемые недельные шаблоны — это <b>не</b> смещения UTC. Назначаются на запись в архив, роли, макрокоманды, экспорт и репликацию.',
+  searchPh:'Поиск расписания', schedulesAria:'Расписания', newSchedule:'＋ Новое расписание',
+  noMatches:'Ничего не найдено.', activeRightNow:'Активно сейчас',
+  perWeek:p => `${p.d} в неделю`, usesN:p => `${p.n} ${pl(p.n,'использование','использования','использований')}`,
+  schedActionsAria:'Действия с расписанием', importJson:'Импорт JSON', exportJson:'Экспорт JSON',
+  nameAria:'Название расписания', coverageTitle:'Фактическое покрытие за неделю',
+  coverage:p => `${p.d} в неделю · ${p.pct}%`,
+  activeNow:'● Активно сейчас', inactiveNow:'○ Неактивно сейчас', unsaved:'Есть несохранённые изменения',
+  btnDelete:'Удалить', btnCancel:'Отмена', btnSave:'Сохранить',
+  toolAria:'Инструмент редактирования', draw:'✎ Рисовать', erase:'⌫ Стирать',
+  undoTitle:'Отменить (Ctrl+Z)', redoTitle:'Повторить (Ctrl+Shift+Z)',
+  snap:'Шаг', snapAria:'Шаг привязки', templates:'Шаблоны ▾',
+  invert:'Инвертировать', invertTitle:'Поменять активное и неактивное время',
+  clearWeekBtn:'Очистить неделю', clearCheckedBtn:'Очистить отмеченные дни',
+  scopeHint:p => `Шаблоны, инверсия и очистка применяются к <b>${p.n} ${pl(p.n,'отмеченному дню','отмеченным дням','отмеченным дням')}</b>`,
+  scopeHintNone:'Отметьте дни флажками, чтобы ограничить массовые операции',
+  rulerPad:'День / итог', selectDayAria:p => `Отметить ${p.day} для массового редактирования`,
+  today:'СЕГОДНЯ', coveredTitle:'Покрытое время в этом календарном дне',
+  timelineAria:p => `Шкала: ${p.day}`, dayActionsAria:p => `Действия: ${p.day}`, nowTitle:p => `Сейчас ${p.t}`,
+  gridHint:p => `Протяните по пустой дорожке, чтобы нарисовать интервал · перетащите блок для перемещения · тяните за края для изменения длины (привязка ${p.step}) · двойной клик открывает блок · <kbd>Del</kbd> удаляет выбранный блок · <kbd>←</kbd>/<kbd>→</kbd> сдвигают его.`,
+  cycTitle:p => ` · по ${p.on} мин каждые ${p.every} мин`, cycBlk:p => ` ↻ ${p.on}/${p.every} мин`,
+  continuesFrom:p => ` (продолжение ${p.from})`,
+  daysChecked:p => `Отмечено ${p.n} ${pl(p.n,'день','дня','дней')}`,
+  scopeNote:p => `${p.list} — массовые операции затронут только эти дни`,
+  copyFromDay:'Копировать из дня…', clearChecked:'Очистить отмеченные', uncheckAll:'Снять все флажки',
+  selHint:'Выберите блок на сетке или отредактируйте активный день в панели справа.',
+  from:'С', to:'По', duration:'Длительность', crossesMidnight:' · переходит через полночь',
+  cyclic:'Цикличный', cycOnLbl:'по', cycEveryLbl:'мин каждые', minSuffix:'мин',
+  copyIntervalTo:'Копировать интервал в…', deleteInterval:'Удалить интервал',
+  usedIn:'Где используется', placesN:p => `${p.n} ${pl(p.n,'место','места','мест')}`,
+  grpArchive:'Запись в архив', grpRoles:'Роли и права', grpMacros:'Макрокоманды',
+  grpExport:'Экспорт видео', grpRepl:'Репликация', notUsed:'Не используется',
+  usedInNote:'Удаление или сужение расписания затрагивает все перечисленные объекты. Конфигуратор предупреждает перед удалением и показывает список зависимых объектов.',
+  excTitle:'Исключения и праздники',
+  rulesN:p => `${p.n} ${pl(p.n,'правило','правила','правил')}`, plusHolidayList:' + список праздников',
+  excMode_none:'Нерабочий (без интервалов)', excMode_full:'Активно 24 часа',
+  excMode_sameAs:'Как в день недели…', excMode_custom:'Свои интервалы',
+  excNote:'Даты-исключения переопределяют недельный шаблон — праздники, сокращённые предпраздничные дни, плановое обслуживание. Диапазон дат охватывает все дни внутри него.',
+  thFrom:'С', thTo:'По', thBehaviour:'Поведение', thDetails:'Детали', thRepeat:'Повтор', thComment:'Комментарий',
+  yearly:'ежегодно', commentPh:'Комментарий', removeExcAria:'Удалить исключение',
+  noExc:'Дат-исключений нет.', addException:'＋ Добавить исключение',
+  holidayListLabel:'Также применять общесерверный список праздников',
+  advTitle:'Срок действия, периодичность и дополнительно', configured:'настроено', defaults:'по умолчанию',
+  validityPeriod:'Срок действия', validFrom:'Действует с', validTo:'Действует по',
+  validityNote:'Пусто = действует всегда. За пределами периода расписание неактивно.',
+  recurrence:'Периодичность', repeatEveryN:'Повторять каждые N дней (вместо недели)',
+  recurrenceNote:'0 = обычная 7-дневная неделя. Любое другое значение повторяет строку понедельника каждые N дней, считая от <i>Действует с</i> (сменные графики вида 2/2 или 4/4).',
+  referenceTime:'Точка отсчёта времени',
+  referenceNote:'Интервалы хранятся как смещения внутри недели и вычисляются по <b>локальному времени сервера</b>, поэтому переход на летнее время сдвигает «настенное» окно, а не смещение. Если конкретный день перехода нужно обработать иначе — добавьте дату-исключение.',
+  audit:'Аудит', lastModified:'Последнее изменение', identifier:'Идентификатор', justNowYou:'только что · вы',
+  apiTitle:'Предпросмотр запроса к API', intervalsN:p => `${p.n} ${pl(p.n,'интервал','интервала','интервалов')}`,
+  apiNote:'Предпросмотр запроса, который редактор отправит при сохранении, — соответствует структуре <code>added / modified / removed_intervals</code> с полями <code>start</code>, <code>length_seconds</code> и <code>period_seconds</code>, используемой API конфигуратора.',
+  inspMeta:p => `${pl(p.n,'Задан','Заданы','Задано')} ${p.n} ${pl(p.n,'интервал','интервала','интервалов')} · ${p.own} собственных · покрыто в этом дне: <b>${p.cov}</b>`,
+  plusCarryOver:p => `↳ плюс перенос ${p.from}`,
+  quickFill:'Быстрое заполнение', allDay:'Весь день', invertDay:'Инвертировать день', clear:'Очистить',
+  intervals:'Интервалы', noIntervals:'Интервалов нет — расписание неактивно весь день.',
+  addInterval:'＋ Добавить интервал', startAria:'Начало', endAria:'Окончание',
+  cycOnTitle:p => `Цикличный: по ${p.on} мин каждые ${p.every} мин — нажмите, чтобы сделать непрерывным`,
+  cycOffTitle:'Сделать цикличным', delIntervalAria:'Удалить интервал',
+  continuesTo:p => `↳ продолжается до ${p.t} ${p.dIn}`,
+  copyDayTo:p => `Копировать ${p.day} в`, selectAll:'Выбрать все', monFri:'Пн–Пт',
+  merge:'Добавить', replace:'Заменить',
+  copyModeNote:'<b>Заменить</b> перезаписывает целевые дни, <b>Добавить</b> дописывает эти интервалы к уже существующим.',
+  applyTemplate:'Применить шаблон', fill24:'Заполнить 24 часа', openInInspector:'Открыть в панели справа',
+  clearDay:'Очистить день', duplicate:'Дублировать', exportThis:'Экспортировать это расписание', deleteEllipsis:'Удалить…',
+  copyFrom:'Копировать из', copyThisIntervalTo:'Копировать этот интервал в', allOtherDays:'Все остальные дни',
+  lastScheduleWarn:'Должно остаться хотя бы одно расписание.',
+  delSchedTitle:'Удалить расписание?',
+  delSchedRefs:p => `«${p.name}» используется в <b>${p.n} ${pl(p.n,'месте','местах','местах')}</b> (роли, макрокоманды, запись в архив, экспорт, репликация). Эти объекты перейдут в режим <i>Никогда</i>, пока вы не назначите им другое расписание.`,
+  delSchedNoRefs:p => `«${p.name}» нигде не используется. Действие нельзя отменить.`,
+  deletedRefs:p => `«${p.name}» удалено — ${p.n} ${pl(p.n,'объект','объекта','объектов')} ${pl(p.n,'остался','остались','остались')} без расписания.`,
+  deleted:p => `«${p.name}» удалено.`,
+  applyTplTitle:'Применить шаблон?',
+  applyTplScoped:p => `Заменить содержимое <b>${p.n} ${pl(p.n,'отмеченного дня','отмеченных дней','отмеченных дней')}</b> шаблоном «${p.tpl}»?`,
+  applyTplWhole:p => `Заменить <b>всю неделю</b> расписания «${p.name}» шаблоном «${p.tpl}»?`,
+  btnApply:'Применить',
+  clearTitle:'Очистить интервалы?',
+  clearScoped:p => `Очистить ${p.n} ${pl(p.n,'отмеченный день','отмеченных дня','отмеченных дней')}?`,
+  clearWhole:'Очистить всю неделю?', btnClear:'Очистить',
+  dayCopied:p => `День «${p.day}» скопирован в ${p.n} ${pl(p.n,'день','дня','дней')}.`,
+  ivCopied:p => `Интервал скопирован в ${p.n} ${pl(p.n,'день','дня','дней')}.`,
+  savedToast:'Расписание сохранено. Назначенные объекты сразу используют новый шаблон.',
+  savedShort:'Расписание сохранено.',
+  discardTitle:'Отменить изменения?', discardMsg:'Все правки, сделанные после последнего сохранения, будут потеряны.',
+  btnDiscard:'Отменить правки', discardedToast:'Изменения отменены.',
+  switchTitle:'Отбросить несохранённые изменения?',
+  switchMsg:'В текущем расписании есть несохранённые изменения. При переключении они останутся в редакторе — надёжнее сначала сохранить или отменить их.',
+  btnSwitch:'Всё равно переключить',
+  exportToast:'Экспорт подготовлен — конфигуратор скачает набор расписаний в виде JSON-файла.',
+  importToast:'Импорт открывает выбор файла и проверяет JSON по схеме интервалов.',
+  checkTargetWarn:'Сначала отметьте хотя бы один день-получатель.',
+  newScheduleName:'Новое расписание', copySuffix:'(копия)',
+  tpl_biz:'Рабочие часы',          tplN_biz:'Пн–Пт 09:00–18:00',
+  tpl_ext:'Расширенный офис',      tplN_ext:'Пн–Пт 07:00–21:00',
+  tpl_shift2:'Две смены',          tplN_shift2:'Пн–Пт 06:00–14:00 + 14:00–22:00',
+  tpl_night:'Ночи',                tplN_night:'Ежедневно 22:00–06:00 (+1 д)',
+  tpl_nonwork:'Нерабочее время',   tplN_nonwork:'Пн–Пт 18:00–09:00 + выходные',
+  tpl_wknd:'Выходные',             tplN_wknd:'Сб–Вс круглосуточно',
+  tpl_always:'24 / 7',             tplN_always:'Каждый день, круглосуточно',
+  tpl_motion:'Цикличная выборка',  tplN_motion:'Ежедневно по 5 мин каждые 30 мин',
+  sc_biz:'Рабочие часы', sc_night:'Ночная смена', sc_wknd:'Патруль по выходным',
+  sc_server:'Серверная 24/7', sc_cyc:'Выборка в архив (цикл)',
+  u_opDay:'Операторы — дневная смена', u_front:'Стойка регистрации', u_guardNight:'Охрана — ночная смена',
+  u_wkndTeam:'Группа патруля по выходным',
+  u_armPerim:'Взятие периметра на охрану в нерабочее время', u_lockDoors:'Блокировка дверей после закрытия',
+  u_smsBreach:'SMS-оповещение при проникновении', u_patrolRem:'Напоминания о патрулировании',
+  u_restartRec:'Ночной перезапуск службы записи',
+  u_lobby1:'Камера холла 1 — постоянная запись', u_lobby2:'Камера холла 2 — постоянная запись',
+  u_perim38:'Камеры периметра 3–8', u_serverCam:'Камера серверной', u_parkSampling:'Камера парковки — выборка',
+  u_lobbyExp:'Ежедневный экспорт холла', u_wkndExp:'Экспорт инцидентов за выходные', u_serverExp:'Непрерывный экспорт серверной',
+  u_dr1:'Резервная площадка DR-1', u_mirror4:'Внешнее зеркало — стойка 4',
+  ex_nye:'Канун Нового года', ex_nyHol:'Новогодние праздники'
+}};
+/** Translate. `k` may be a plain string used as-is when it is not a known key. */
+function T(k, p){
+  const dict = I18N[S.lang] || I18N.en;
+  const v = dict[k] !== undefined ? dict[k] : I18N.en[k];
+  if(v === undefined) return k;
+  return typeof v === 'function' ? v(p || {}) : v;
+}
+const dayName  = d => T('day_' + d);     // nominative: Monday / Понедельник
+const dayShort = d => T('ds_' + d);      // Mon / Пн
+const dayAcc   = d => T('da_' + d);      // "copy Wednesday" / «копировать среду»
+const dayIn    = d => T('dIn_' + d);     // "on Tuesday" / «во вторник»
+const dayFrom  = d => T('dFrom_' + d);   // "from Sunday" / «с воскресенья»
+
+/* ── time helpers ─────────────────────────────────────────────── */
+const p2 = n => (n < 10 ? '0' : '') + n;
+function fmt(min, use12){
+  const m = ((min % DAY_MIN) + DAY_MIN) % DAY_MIN, h = Math.floor(m / 60), mm = m % 60;
+  if(!use12) return p2(h) + ':' + p2(mm);
+  const ap = h < 12 ? 'AM' : 'PM', h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + ':' + p2(mm) + ' ' + ap;
+}
+function fmtEnd(min, use12){ return min >= DAY_MIN && min % DAY_MIN === 0 ? (use12 ? '12:00 AM (+1d)' : '24:00') : fmt(min, use12) + (min > DAY_MIN ? ' (+1d)' : ''); }
+const hm    = min => p2(Math.floor((((min % DAY_MIN) + DAY_MIN) % DAY_MIN) / 60)) + ':' + p2(min % 60);
+const parseHM = s => { if(!s) return 0; const [a,b] = s.split(':'); return (+a || 0) * 60 + (+b || 0); };
+function dur(min){
+  if(min <= 0) return T('zeroMin');
+  const h = Math.floor(min / 60), m = min % 60;
+  return (h ? h + ' ' + T('unitH') : '') + (h && m ? ' ' : '') + (m ? m + ' ' + T('unitMin') : '');
+}
+const nowMin  = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const todayKey = () => DAYS[(new Date().getDay() + 6) % 7];
+const nextDay = d => DAYS[(DAYS.indexOf(d) + 1) % 7];
+const prevDay = d => DAYS[(DAYS.indexOf(d) + 6) % 7];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ── interval maths ───────────────────────────────────────────── */
+/** Merge overlapping / touching plain intervals. Cyclic ones stay untouched. */
+function normalize(list){
+  const cyc = list.filter(r => r.cyc);
+  const plain = list.filter(r => !r.cyc).slice().sort((a, b) => a.start - b.start);
+  const out = [];
+  for(const r of plain){
+    if(r.len <= 0) continue;
+    const last = out[out.length - 1];
+    if(last && r.start <= last.start + last.len){
+      last.len = Math.max(last.start + last.len, r.start + r.len) - last.start;
+    } else out.push({ id: r.id || nid(), start: r.start, len: r.len, cyc: null });
+  }
+  return out.concat(cyc).sort((a, b) => a.start - b.start);
+}
+/** Remove [from,to) from every plain interval of the list (erase tool). */
+function subtract(list, from, to){
+  const out = [];
+  for(const r of list){
+    const s = r.start, e = r.start + r.len;
+    if(r.cyc || to <= s || from >= e){ out.push(r); continue; }
+    if(from > s) out.push({ id: nid(), start: s, len: from - s, cyc: null });
+    if(to < e)   out.push({ id: nid(), start: to, len: e - to, cyc: null });
+  }
+  return normalize(out);
+}
+/** Minutes actually covered on the calendar day `d`, incl. carry-in from the previous day. */
+function coveredOn(days, d){
+  let m = 0;
+  (days[d] || []).forEach(r => { m += activeMinutes(r, Math.min(r.len, DAY_MIN - r.start)); });
+  (days[prevDay(d)] || []).forEach(r => { const over = r.start + r.len - DAY_MIN; if(over > 0) m += activeMinutes(r, over); });
+  return Math.round(m);
+}
+/** Effective active minutes inside a `span` window of an interval (cyclic pulses count partially). */
+function activeMinutes(r, span){
+  if(span <= 0) return 0;
+  if(!r.cyc) return span;
+  const cycles = span / r.cyc.every;
+  return cycles * Math.min(r.cyc.on, r.cyc.every);
+}
+const weekMinutes = days => DAYS.reduce((n, d) => n + (days[d] || []).reduce((k, r) => k + activeMinutes(r, r.len), 0), 0);
+function isActiveNow(days){
+  const d = todayKey(), t = nowMin();
+  const hit = (r, offset) => {
+    const s = r.start - offset, e = s + r.len;
+    if(t < s || t >= e) return false;
+    if(!r.cyc) return true;
+    return (t - s) % r.cyc.every < r.cyc.on;
+  };
+  return (days[d] || []).some(r => hit(r, 0)) || (days[prevDay(d)] || []).some(r => hit(r, DAY_MIN));
+}
+/** CSS gradient for the mini-preview strips. Cyclic ranges are drawn faded. */
+function strip(list){
+  const spans = (list || []).flatMap(r => {
+    const c = r.cyc ? 'var(--accent-half)' : 'var(--accent)';
+    const out = [{ from:Math.max(0, r.start), to:Math.min(r.start + r.len, DAY_MIN), c }];
+    if(r.start + r.len > DAY_MIN) out.push({ from:0, to:r.start + r.len - DAY_MIN, c });  // wrap-around tail
+    return out;
+  }).filter(s => s.to > s.from).sort((a, b) => a.from - b.from);
+  if(!spans.length) return '';
+  const stops = spans.map(s => {
+    const a = (s.from / DAY_MIN * 100).toFixed(2), b = (s.to / DAY_MIN * 100).toFixed(2);
+    return `transparent ${a}%, ${s.c} ${a}%, ${s.c} ${b}%, transparent ${b}%`;
+  });
+  return `linear-gradient(to right, transparent 0%, ${stops.join(', ')}, transparent 100%)`;
+}
+/** Strip for a calendar day: own intervals plus what carries in from the day before. */
+const stripDay = (dd, d) => strip((dd[d] || []).concat((dd[prevDay(d)] || []).filter(r => r.start + r.len > DAY_MIN)
+  .map(r => ({ ...r, start:r.start - DAY_MIN }))));
+
+/* ── templates ────────────────────────────────────────────────── */
+const TEMPLATES = [
+  { id:'biz',    days:['Mon','Tue','Wed','Thu','Fri'], iv:[{start:540,len:540}] },
+  { id:'ext',    days:['Mon','Tue','Wed','Thu','Fri'], iv:[{start:420,len:840}] },
+  { id:'shift2', days:['Mon','Tue','Wed','Thu','Fri'], iv:[{start:360,len:480},{start:840,len:480}] },
+  { id:'night',  days:DAYS, iv:[{start:1320,len:480}] },
+  { id:'nonwork',days:DAYS, iv:[{start:1080,len:900}], weekendFull:true },
+  { id:'wknd',   days:['Sat','Sun'], iv:[{start:0,len:1440}] },
+  { id:'always', days:DAYS, iv:[{start:0,len:1440}] },
+  { id:'motion', days:DAYS, iv:[{start:0,len:1440,cyc:{every:30,on:5}}] }
+];
+const tplLabel = t => T('tpl_' + t.id);
+const tplNote  = t => T('tplN_' + t.id);
+function buildWeek(tpl){
+  const days = {};
+  DAYS.forEach(d => {
+    if(tpl.weekendFull && (d === 'Sat' || d === 'Sun')) days[d] = [{ id:nid(), start:0, len:1440, cyc:null }];
+    else days[d] = tpl.days.includes(d) ? tpl.iv.map(r => ({ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null })) : [];
+  });
+  return days;
+}
+const emptyWeek = () => { const o = {}; DAYS.forEach(d => o[d] = []); return o; };
+
+/* ── seed data ────────────────────────────────────────────────── */
+function seed(){
+  // `nameKey` / `noteKey` keep the demo content translatable; `name` wins once the user renames.
+  const mk = (nameKey, tplId, extra) => Object.assign({
+    id: nid('s'), nameKey, name:'', days: buildWeek(TEMPLATES.find(t => t.id === tplId)),
+    exceptions: [], validFrom:'', validTo:'', repeatDays:0, useHolidayList:false,
+    modified:'2026-09-05 14:12 · a.ivanov'
+  }, extra || {});
+  const a = mk('sc_biz','biz',{ usedIn:{
+      roles:['u_opDay','u_front'], macros:['u_armPerim'], archive:['u_lobby1','u_lobby2'],
+      exportTasks:['u_lobbyExp'], replication:['u_dr1'] },
+    exceptions:[
+      { id:nid('e'), from:'2026-12-31', to:'2026-12-31', mode:'none',   noteKey:'ex_nye',   note:'', yearly:true,  iv:[] },
+      { id:nid('e'), from:'2027-01-01', to:'2027-01-08', mode:'sameAs', noteKey:'ex_nyHol', note:'', sameAs:'Sun', yearly:false, iv:[] }
+    ]});
+  const b = mk('sc_night','night',{ usedIn:{ roles:['u_guardNight'],
+      macros:['u_lockDoors','u_smsBreach'], archive:['u_perim38'], exportTasks:[], replication:['u_dr1'] } });
+  const c = mk('sc_wknd','wknd',{ usedIn:{ roles:['u_wkndTeam'], macros:['u_patrolRem'],
+      archive:[], exportTasks:['u_wkndExp'], replication:[] } });
+  const d = mk('sc_server','always',{ usedIn:{ roles:[], macros:['u_restartRec'],
+      archive:['u_serverCam'], exportTasks:['u_serverExp'], replication:['u_mirror4'] } });
+  const e = mk('sc_cyc','motion',{ usedIn:{ roles:[], macros:[], archive:['u_parkSampling'], exportTasks:[], replication:[] } });
+  const items = {}; [a,b,c,d,e].forEach(s => items[s.id] = s);
+  return { order:[a.id,b.id,c.id,d.id,e.id], items, selectedId:a.id };
+}
+/** Display name: user-entered value, otherwise the translated demo label. */
+const schedName = s => s.name || (s.nameKey ? T(s.nameKey) : '');
+const excNote   = e => e.note || (e.noteKey ? T(e.noteKey) : '');
+
+/* ── state ────────────────────────────────────────────────────── */
+const S = Object.assign({
+  search:'', tool:'draw', step:15, use12:false, scheme:'light', lang:'en',
+  checked:new Set(), focusDay:todayKey(), sel:null,
+  undo:[], redo:[], dirty:false, saved:null,
+  panels:{ usedIn:false, exceptions:false, advanced:false, api:false },
+  pop:null, modal:null, toasts:[], drag:null
+}, seed());
+S.saved = snap();
+
+const cur   = () => S.items[S.selectedId];
+const days  = () => cur().days;
+function snap(){ return JSON.stringify({ items:S.items, order:S.order }); }
+function pushUndo(){ S.undo.push(snap()); if(S.undo.length > 60) S.undo.shift(); S.redo.length = 0; S.dirty = snap() !== S.saved; }
+function restore(json){ const o = JSON.parse(json); S.items = o.items; S.order = o.order;
+  if(!S.items[S.selectedId]) S.selectedId = S.order[0]; S.sel = null; S.dirty = snap() !== S.saved; }
+function doUndo(){ if(!S.undo.length) return; S.redo.push(snap()); restore(S.undo.pop()); render(); }
+function doRedo(){ if(!S.redo.length) return; S.undo.push(snap()); restore(S.redo.pop()); render(); }
+
+/** Every mutation goes through this: snapshot for undo, then re-render. */
+function edit(fn){ pushUndo(); fn(); S.dirty = snap() !== S.saved; render(); }
+function setDay(d, list){ days()[d] = normalize(list); }
+
+function toast(type, text, ms){
+  const t = { id:nid('t'), type, text };
+  S.toasts.push(t); renderToasts();
+  setTimeout(() => { S.toasts = S.toasts.filter(x => x.id !== t.id); renderToasts(); }, ms || 3200);
+}
+function confirmThen(title, msg, label, fn){ S.modal = { title, msg, label, fn }; render(); }
+
+/* ── mutations ────────────────────────────────────────────────── */
+function addSchedule(){
+  edit(() => {
+    const s = { id:nid('s'), name:'', nameKey:'newScheduleName', days:emptyWeek(), exceptions:[], validFrom:'', validTo:'',
+      repeatDays:0, useHolidayList:false, modified:'—', usedIn:{roles:[],macros:[],archive:[],exportTasks:[],replication:[]} };
+    S.items[s.id] = s; S.order.push(s.id); S.selectedId = s.id; S.checked.clear();
+  });
+}
+function duplicateSchedule(id){
+  edit(() => {
+    const src = S.items[id], copy = JSON.parse(JSON.stringify(src));
+    copy.id = nid('s'); copy.name = schedName(src) + ' ' + T('copySuffix'); copy.nameKey = null; copy.modified = '—';
+    copy.usedIn = {roles:[],macros:[],archive:[],exportTasks:[],replication:[]};
+    DAYS.forEach(d => copy.days[d].forEach(r => r.id = nid()));
+    S.items[copy.id] = copy; S.order.splice(S.order.indexOf(id) + 1, 0, copy.id); S.selectedId = copy.id;
+  });
+}
+function usageCount(s){ const u = s.usedIn || {}; return ['roles','macros','archive','exportTasks','replication'].reduce((n, k) => n + (u[k] || []).length, 0); }
+function deleteSchedule(id){
+  if(S.order.length <= 1){ toast('warning', T('lastScheduleWarn')); return; }
+  const s = S.items[id], n = usageCount(s), name = esc(schedName(s));
+  confirmThen(T('delSchedTitle'),
+    n ? T('delSchedRefs', { name, n }) : T('delSchedNoRefs', { name }),
+    T('btnDelete'), () => {
+      edit(() => { delete S.items[id]; S.order = S.order.filter(x => x !== id);
+        if(S.selectedId === id) S.selectedId = S.order[0]; });
+      toast(n ? 'warning' : 'info', n ? T('deletedRefs', { name, n }) : T('deleted', { name }), n ? 6000 : 3000);
+    });
+}
+function applyTemplate(tpl){
+  const scoped = S.checked.size > 0;
+  confirmThen(T('applyTplTitle'),
+    scoped ? T('applyTplScoped', { n:S.checked.size, tpl:esc(tplLabel(tpl)) })
+           : T('applyTplWhole',  { name:esc(schedName(cur())), tpl:esc(tplLabel(tpl)) }),
+    T('btnApply'), () => edit(() => {
+      if(scoped){
+        const src = buildWeek(tpl);
+        S.checked.forEach(d => days()[d] = src[d].map(r => ({...r, id:nid(), cyc:r.cyc ? {...r.cyc} : null})));
+      } else cur().days = buildWeek(tpl);
+      S.sel = null;
+    }));
+}
+function clearWeek(){
+  const scoped = S.checked.size > 0;
+  confirmThen(T('clearTitle'), scoped ? T('clearScoped', { n:S.checked.size }) : T('clearWhole'),
+    T('btnClear'), () => edit(() => {
+      if(scoped) S.checked.forEach(d => days()[d] = []); else cur().days = emptyWeek();
+      S.sel = null;
+    }));
+}
+function invertWeek(){
+  edit(() => {
+    const targets = S.checked.size ? Array.from(S.checked) : DAYS;
+    targets.forEach(d => {
+      const src = normalize(days()[d].filter(r => !r.cyc));
+      const out = []; let cursor = 0;
+      src.forEach(r => { const s = Math.max(0, r.start); if(s > cursor) out.push({id:nid(), start:cursor, len:s - cursor, cyc:null});
+        cursor = Math.max(cursor, Math.min(DAY_MIN, r.start + r.len)); });
+      if(cursor < DAY_MIN) out.push({id:nid(), start:cursor, len:DAY_MIN - cursor, cyc:null});
+      days()[d] = out;
+    });
+    S.sel = null;
+  });
+}
+function copyDayTo(from, targets, mode){
+  edit(() => {
+    const src = days()[from];
+    targets.forEach(d => { if(d === from) return;
+      const clone = src.map(r => ({ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null }));
+      setDay(d, mode === 'merge' ? days()[d].concat(clone) : clone);
+    });
+  });
+  toast('success', T('dayCopied', { day:dayName(from), n:targets.filter(d => d !== from).length }));
+}
+
+/* ═══════════════ RENDER ═══════════════════════════════════════ */
+const shell = document.getElementById('shell');
+let raf = null;
+function render(){ if(raf) return; raf = requestAnimationFrame(() => { raf = null; paint(); }); }
+
+function paint(){
+  const fk = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-fk');
+  const selStart = fk && document.activeElement.selectionStart, selEnd = fk && document.activeElement.selectionEnd;
+  document.body.setAttribute('data-scheme', S.scheme);
+  document.documentElement.setAttribute('lang', S.lang);
+  document.title = T('sideTitle') + ' — ' + T('brand') + ' (v3)';
+  document.getElementById('appbar').innerHTML = viewAppbar();
+  shell.innerHTML = viewSide() + viewMain() + viewInsp();
+  document.getElementById('overlays').innerHTML = viewPop() + viewModal();
+  if(fk){
+    const el = shell.querySelector(`[data-fk="${fk}"]`) || document.querySelector(`[data-fk="${fk}"]`);
+    if(el){ el.focus(); try{ el.setSelectionRange(selStart, selEnd); }catch(e){} }
+  }
+}
+function renderToasts(){
+  document.getElementById('toasts').innerHTML = S.toasts.map(t =>
+    `<div class="toast toast--${t.type}" role="status"><span>${t.text}</span></div>`).join('');
+}
+
+/* ── top bar ──────────────────────────────────────────────────── */
+function viewAppbar(){
+  const tabs = ['navDevices','navGroups','navDetectors','navArchives','navRoles',
+                'navSchedules','navMacros','navAudit','navSettings'];
+  return `<span class="brand">${T('brand')}</span>
+    <nav class="tabs" aria-label="${T('navAria')}">
+      ${tabs.map(k => `<button type="button" ${k === 'navSchedules' ? 'aria-current="page"' : ''}>${T(k)}</button>`).join('')}
+    </nav>
+    <span class="grow"></span>
+    <div class="row" style="gap:6px">
+      <select class="langsel" data-act="lang" aria-label="${T('langAria')}" title="${T('langAria')}">
+        ${LANGS.map(l => `<option value="${l.id}" ${S.lang === l.id ? 'selected' : ''}>${l.label}</option>`).join('')}
+      </select>
+      <div class="seg" role="group" aria-label="${T('fmtAria')}">
+        <button type="button" data-act="fmt" data-v="24" aria-pressed="${!S.use12}">${T('h24')}</button>
+        <button type="button" data-act="fmt" data-v="12" aria-pressed="${S.use12}">${T('h12')}</button>
+      </div>
+      <button class="btn btn--subtle btn--icon" type="button" data-act="theme"
+        title="${T('themeTitle')}" aria-label="${T('themeAria')}">◐</button>
+    </div>`;
+}
+
+/* ── left panel ───────────────────────────────────────────────── */
+function viewSide(){
+  const q = S.search.trim().toLowerCase();
+  const rows = S.order.filter(id => !q || schedName(S.items[id]).toLowerCase().includes(q)).map(id => {
+    const s = S.items[id], sel = id === S.selectedId, n = usageCount(s);
+    const strips = DAYS.map(d => {
+      const g = stripDay(s.days, d);
+      return `<i style="${g ? 'background-image:' + g : ''}"></i>`;
+    }).join('');
+    return `<div class="sched" role="option" aria-selected="${sel}" data-act="pick" data-id="${id}" tabindex="0">
+      <div class="row" style="gap:6px">
+        <div class="sched__name grow">${esc(schedName(s))}</div>
+        ${isActiveNow(s.days) ? `<span class="dot" title="${T('activeRightNow')}"></span>` : ''}
+      </div>
+      <div class="sched__strip" aria-hidden="true">${strips}</div>
+      <div class="sched__meta">${T('perWeek', { d:dur(Math.round(weekMinutes(s.days))) })} · ${T('usesN', { n })}</div>
+      <button class="btn btn--subtle btn--sm btn--icon sched__kebab" type="button" data-act="schedMenu" data-id="${id}"
+        aria-label="${T('schedActionsAria')}">⋯</button>
+    </div>`;
+  }).join('');
+  return `<aside class="side">
+    <div class="side__head">
+      <div class="side__title">${T('sideTitle')}</div>
+      <p class="hint" style="margin:0">${T('sideNote')}</p>
+      <input class="inp" data-fk="search" data-act="search" placeholder="${T('searchPh')}" value="${esc(S.search)}" aria-label="${T('searchPh')}">
+      <button class="btn btn--outline" type="button" data-act="add">${T('newSchedule')}</button>
+    </div>
+    <div class="side__list" role="listbox" aria-label="${T('schedulesAria')}">${rows || `<p class="hint" style="padding:8px 10px">${T('noMatches')}</p>`}</div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border-default)" class="row">
+      <button class="btn btn--subtle btn--sm grow" type="button" data-act="import">${T('importJson')}</button>
+      <button class="btn btn--subtle btn--sm grow" type="button" data-act="export">${T('exportJson')}</button>
+    </div>
+  </aside>`;
+}
+
+/* ── centre panel ─────────────────────────────────────────────── */
+function viewMain(){
+  const s = cur(), live = isActiveNow(s.days), wk = Math.round(weekMinutes(s.days));
+  const cov = (wk / (7 * DAY_MIN) * 100).toFixed(0);
+  return `<main class="main"><div class="editor">
+
+    <div class="row wrap">
+      <input class="inp" data-fk="name" data-act="rename" value="${esc(schedName(s))}" aria-label="${T('nameAria')}" style="width:236px;flex:none">
+      <span class="pill" title="${T('coverageTitle')}">${T('coverage', { d:dur(wk), pct:cov })}</span>
+      <span class="pill ${live ? 'pill--live' : 'pill--idle'}">${live ? T('activeNow') : T('inactiveNow')}</span>
+      ${S.dirty ? `<span class="pill" style="background:var(--fb-warning);color:var(--status-warning)">${T('unsaved')}</span>` : ''}
+      <span class="grow"></span>
+      <button class="btn btn--danger" type="button" data-act="del">${T('btnDelete')}</button>
+      <button class="btn" type="button" data-act="cancel" ${S.dirty ? '' : 'disabled'}>${T('btnCancel')}</button>
+      <button class="btn btn--primary" type="button" data-act="save" ${S.dirty ? '' : 'disabled'}>${T('btnSave')}</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="${T('toolAria')}">
+        <button type="button" data-act="tool" data-v="draw"  aria-pressed="${S.tool === 'draw'}">${T('draw')}</button>
+        <button type="button" data-act="tool" data-v="erase" aria-pressed="${S.tool === 'erase'}">${T('erase')}</button>
+      </div>
+      <div class="tbsep"></div>
+      <button class="btn btn--subtle btn--icon" type="button" data-act="undo" title="${T('undoTitle')}" ${S.undo.length ? '' : 'disabled'}>↶</button>
+      <button class="btn btn--subtle btn--icon" type="button" data-act="redo" title="${T('redoTitle')}" ${S.redo.length ? '' : 'disabled'}>↷</button>
+      <div class="tbsep"></div>
+      <span class="hint">${T('snap')}</span>
+      <div class="seg" role="group" aria-label="${T('snapAria')}">
+        ${[5,15,30,60].map(v => `<button type="button" data-act="step" data-v="${v}" aria-pressed="${S.step === v}">${stepLabel(v)}</button>`).join('')}
+      </div>
+      <div class="tbsep"></div>
+      <button class="btn btn--outline" type="button" data-act="tplMenu">${T('templates')}</button>
+      <button class="btn btn--outline" type="button" data-act="invert" title="${T('invertTitle')}">${T('invert')}</button>
+      <button class="btn btn--subtle" type="button" data-act="clearWeek">${S.checked.size ? T('clearCheckedBtn') : T('clearWeekBtn')}</button>
+      <span class="grow"></span>
+      <span class="hint">${S.checked.size ? T('scopeHint', { n:S.checked.size }) : T('scopeHintNone')}</span>
+    </div>
+
+    ${viewGrid()}
+
+    <p class="hint" style="margin:0">${T('gridHint', { step:stepLabel(S.step) })}</p>
+
+    ${viewSelBar()}
+    ${viewUsedIn()}
+    ${viewExceptions()}
+    ${viewAdvanced()}
+    ${viewApi()}
+  </div></main>`;
+}
+
+const stepLabel = v => v < 60 ? v + ' ' + T('unitMin') : T('hour1');
+
+function viewGrid(){
+  const today = todayKey(), tnow = nowMin();
+  const rows = DAYS.map(d => {
+    const checked = S.checked.has(d), dim = S.checked.size > 0 && !checked;
+    const covered = coveredOn(days(), d);
+    const blocks = days()[d].map(r => blockHtml(d, r, false)).join('');
+    // carry-in from the previous day, rendered read-only
+    const cont = (days()[prevDay(d)] || []).filter(r => r.start + r.len > DAY_MIN)
+      .map(r => blockHtml(prevDay(d), r, true)).join('');
+    return `<div class="drow ${dim ? 'drow--dim' : ''} ${d === today ? 'drow--today' : ''} ${S.focusDay === d && !S.checked.size ? 'drow--focus' : ''}">
+      <div class="dchk"><input type="checkbox" data-act="check" data-d="${d}" ${checked ? 'checked' : ''} aria-label="${T('selectDayAria', { day:dayName(d) })}"></div>
+      <div class="dday" data-act="focusDay" data-d="${d}">${dayName(d)}${d === today ? ` <span class="subtle" style="font-size:var(--fs-cap)">&nbsp;${T('today')}</span>` : ''}</div>
+      <div class="dsum" title="${T('coveredTitle')}">${covered ? dur(covered) : '—'}</div>
+      <div class="track ${S.tool === 'erase' ? 'track--erase' : ''}" data-track="${d}" role="group" aria-label="${T('timelineAria', { day:dayName(d) })}">
+        ${cont}${blocks}
+        ${d === today ? `<div class="nowline" style="left:${(tnow / DAY_MIN * 100).toFixed(3)}%" title="${T('nowTitle', { t:fmt(tnow, S.use12) })}"></div>` : ''}
+      </div>
+      <div class="dmenu"><button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="dayMenu" data-d="${d}" aria-label="${T('dayActionsAria', { day:dayName(d) })}">⋯</button></div>
+    </div>`;
+  }).join('');
+  return `<div class="grid">
+    <div class="ruler">
+      <div class="ruler__pad">${T('rulerPad')}</div>
+      <div class="ruler__cells">${Array.from({length:24}, (_, h) => `<span>${h % 2 === 0 ? p2(h) : ''}</span>`).join('')}</div>
+      <div class="ruler__end"></div>
+    </div>
+    ${rows}
+  </div>`;
+}
+
+function blockHtml(owner, r, isCont){
+  const from = isCont ? 0 : r.start;
+  const to   = isCont ? r.start + r.len - DAY_MIN : Math.min(r.start + r.len, DAY_MIN);
+  const w = (to - from) / DAY_MIN * 100, l = from / DAY_MIN * 100;
+  const sel = !isCont && S.sel && S.sel.day === owner && S.sel.id === r.id;
+  const full = `${fmt(r.start, S.use12)} – ${fmtEnd(r.start + r.len, S.use12)}` + (r.cyc ? T('cycTitle', r.cyc) : '');
+  const mark = r.cyc ? ' ↻' : '';
+  const text = w < 4.5 ? '' : (w < 11 ? fmt(r.start, S.use12) + mark
+    : `${fmt(r.start, S.use12)} – ${fmtEnd(r.start + r.len, S.use12)}${r.cyc && w > 24 ? T('cycBlk', r.cyc) : mark}`);
+  const cls = ['blk', r.cyc ? 'blk--cyc' : '', isCont ? 'blk--cont' : '', sel ? 'blk--sel' : ''].filter(Boolean).join(' ');
+  return `<div class="${cls}" style="left:${l.toFixed(3)}%;width:${Math.max(w, .6).toFixed(3)}%"
+      data-blk="${r.id}" data-owner="${owner}" data-cont="${isCont ? 1 : 0}" title="${esc(isCont ? full + T('continuesFrom', { from:dayFrom(owner) }) : full)}">
+    ${isCont ? '' : '<span class="blk__h blk__h--l" data-h="l"></span>'}
+    <span style="pointer-events:none">${isCont ? '↳ ' : ''}${text}</span>
+    ${isCont ? '' : '<span class="blk__h blk__h--r" data-h="r"></span>'}
+  </div>`;
+}
+
+/* selection / multi-day bar */
+function viewSelBar(){
+  if(S.checked.size > 0){
+    return `<div class="selbar selbar--multi">
+      <b>${T('daysChecked', { n:S.checked.size })}</b>
+      <span class="hint">${T('scopeNote', { list:DAYS.filter(d => S.checked.has(d)).map(dayName).join(', ') })}</span>
+      <span class="grow"></span>
+      <button class="btn btn--outline btn--sm" type="button" data-act="copyFrom">${T('copyFromDay')}</button>
+      <button class="btn btn--outline btn--sm" type="button" data-act="clearChecked">${T('clearChecked')}</button>
+      <button class="btn btn--subtle btn--sm" type="button" data-act="uncheckAll">${T('uncheckAll')}</button>
+    </div>`;
+  }
+  const sel = S.sel && (days()[S.sel.day] || []).find(r => r.id === S.sel.id);
+  if(!sel) return `<div class="selbar"><span class="hint">${T('selHint')}</span></div>`;
+  return `<div class="selbar">
+    <b style="min-width:78px">${dayName(S.sel.day)}</b>
+    <label class="hint">${T('from')} <input class="inp inp--time inp--sm" type="time" data-fk="selFrom" data-act="selFrom" value="${hm(sel.start)}" step="300"></label>
+    <label class="hint">${T('to')} <input class="inp inp--time inp--sm" type="time" data-fk="selTo" data-act="selTo" value="${hm((sel.start + sel.len) % DAY_MIN)}" step="300"></label>
+    <span class="hint">${T('duration')} <b>${dur(sel.len)}</b>${sel.start + sel.len > DAY_MIN ? T('crossesMidnight') : ''}</span>
+    <label class="hint row" style="gap:5px"><input type="checkbox" data-act="selCyc" ${sel.cyc ? 'checked' : ''}> ${T('cyclic')}</label>
+    ${sel.cyc ? `<span class="hint">${T('cycOnLbl')} <input class="inp inp--sm" data-fk="cycOn" data-act="cycOn" type="number" min="1" max="1440" value="${sel.cyc.on}" style="width:56px"> ${T('cycEveryLbl')}
+      <input class="inp inp--sm" data-fk="cycEvery" data-act="cycEvery" type="number" min="1" max="1440" value="${sel.cyc.every}" style="width:56px"> ${T('minSuffix')}</span>` : ''}
+    <span class="grow"></span>
+    <button class="btn btn--outline btn--sm" type="button" data-act="copyIv">${T('copyIntervalTo')}</button>
+    <button class="btn btn--outline btn--sm" type="button" data-act="delIv">${T('deleteInterval')}</button>
+  </div>`;
+}
+
+/* ── accordions ───────────────────────────────────────────────── */
+function acc(key, title, meta, body){
+  return `<div class="acc" data-open="${S.panels[key]}">
+    <button class="acc__sum" type="button" data-act="panel" data-k="${key}" aria-expanded="${S.panels[key]}">
+      <span class="caret">▶</span><span>${title}</span><span class="hint" style="font-weight:400">${meta}</span>
+    </button>
+    <div class="acc__body">${body}</div>
+  </div>`;
+}
+function viewUsedIn(){
+  const u = cur().usedIn || {}, n = usageCount(cur());
+  const groups = [
+    ['grpArchive', u.archive], ['grpRoles', u.roles], ['grpMacros', u.macros],
+    ['grpExport', u.exportTasks], ['grpRepl', u.replication]
+  ];
+  const body = `<div class="grpgrid" style="margin-top:8px">${groups.map(([key, items]) => `
+    <div class="grp"><h4>${T(key)} · ${(items || []).length}</h4>
+      ${(items || []).length ? `<div class="row wrap" style="gap:5px">${items.map(i => `<span class="chip">${esc(T(i))}</span>`).join('')}</div>`
+        : `<span class="hint">${T('notUsed')}</span>`}
+    </div>`).join('')}</div>
+  <p class="hint" style="margin:10px 0 0">${T('usedInNote')}</p>`;
+  return acc('usedIn', T('usedIn'), T('placesN', { n }), body);
+}
+function viewExceptions(){
+  const s = cur();
+  const modes = ['none','full','sameAs','custom'];
+  const rows = s.exceptions.map(e => { const c = (e.iv && e.iv[0]) || { start:540, len:480 }; return `<tr>
+    <td><input class="inp inp--sm" type="date" data-act="exFrom" data-id="${e.id}" data-fk="exF${e.id}" value="${e.from}"></td>
+    <td><input class="inp inp--sm" type="date" data-act="exTo" data-id="${e.id}" data-fk="exT${e.id}" value="${e.to}"></td>
+    <td><select class="inp inp--sm" data-act="exMode" data-id="${e.id}">${modes.map(v => `<option value="${v}" ${e.mode === v ? 'selected' : ''}>${T('excMode_' + v)}</option>`).join('')}</select></td>
+    <td>${e.mode === 'sameAs'
+      ? `<select class="inp inp--sm" data-act="exSame" data-id="${e.id}">${DAYS.map(d => `<option value="${d}" ${e.sameAs === d ? 'selected' : ''}>${dayName(d)}</option>`).join('')}</select>`
+      : e.mode === 'custom'
+        ? `<span class="row" style="gap:4px"><input class="inp inp--time inp--sm" type="time" data-act="exCFrom" data-id="${e.id}" data-fk="exCF${e.id}" value="${hm(c.start)}">
+           <input class="inp inp--time inp--sm" type="time" data-act="exCTo" data-id="${e.id}" data-fk="exCT${e.id}" value="${hm((c.start + c.len) % DAY_MIN)}"></span>`
+        : '<span class="hint">—</span>'}</td>
+    <td><label class="daychk"><input type="checkbox" data-act="exYear" data-id="${e.id}" ${e.yearly ? 'checked' : ''}> ${T('yearly')}</label></td>
+    <td><input class="inp inp--sm" data-act="exNote" data-id="${e.id}" data-fk="exN${e.id}" value="${esc(excNote(e))}" placeholder="${T('commentPh')}"></td>
+    <td style="width:28px"><button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="exDel" data-id="${e.id}" aria-label="${T('removeExcAria')}">✕</button></td>
+  </tr>`; }).join('');
+  const body = `<p class="hint" style="margin:8px 0">${T('excNote')}</p>
+    <table class="tbl"><thead><tr><th>${T('thFrom')}</th><th>${T('thTo')}</th><th>${T('thBehaviour')}</th><th>${T('thDetails')}</th><th>${T('thRepeat')}</th><th>${T('thComment')}</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7"><span class="hint">${T('noExc')}</span></td></tr>`}</tbody></table>
+    <div class="row" style="margin-top:9px">
+      <button class="btn btn--outline btn--sm" type="button" data-act="exAdd">${T('addException')}</button>
+      <label class="daychk" style="margin-left:6px"><input type="checkbox" data-act="holList" ${s.useHolidayList ? 'checked' : ''}>
+        ${T('holidayListLabel')}</label>
+    </div>`;
+  return acc('exceptions', T('excTitle'),
+    T('rulesN', { n:s.exceptions.length }) + (s.useHolidayList ? T('plusHolidayList') : ''), body);
+}
+function viewAdvanced(){
+  const s = cur();
+  const body = `<div class="grpgrid" style="margin-top:8px">
+    <div class="grp"><h4>${T('validityPeriod')}</h4>
+      <div class="row" style="gap:6px">
+        <label class="grow"><span class="lbl">${T('validFrom')}</span><input class="inp inp--sm" type="date" data-act="vFrom" data-fk="vFrom" value="${s.validFrom}"></label>
+        <label class="grow"><span class="lbl">${T('validTo')}</span><input class="inp inp--sm" type="date" data-act="vTo" data-fk="vTo" value="${s.validTo}"></label>
+      </div>
+      <p class="hint" style="margin:6px 0 0">${T('validityNote')}</p>
+    </div>
+    <div class="grp"><h4>${T('recurrence')}</h4>
+      <label><span class="lbl">${T('repeatEveryN')}</span>
+        <input class="inp inp--sm" type="number" min="0" max="366" data-act="repeat" data-fk="repeat" value="${s.repeatDays}"></label>
+      <p class="hint" style="margin:6px 0 0">${T('recurrenceNote')}</p>
+    </div>
+    <div class="grp"><h4>${T('referenceTime')}</h4>
+      <p class="hint" style="margin:0">${T('referenceNote')}</p>
+    </div>
+    <div class="grp"><h4>${T('audit')}</h4>
+      <p class="hint" style="margin:0">${T('lastModified')}: ${esc(s.modified === '@now' ? T('justNowYou') : s.modified)}<br>${T('identifier')}: <code>${s.id}</code></p>
+    </div>
+  </div>`;
+  return acc('advanced', T('advTitle'), s.validFrom || s.validTo || s.repeatDays ? T('configured') : T('defaults'), body);
+}
+function viewApi(){
+  const s = cur(), added = [];
+  DAYS.forEach(d => (s.days[d] || []).forEach(r => {
+    added.push({
+      start:{ day_of_week:DAY_ISO[d], hour:Math.floor(r.start / 60), minute:r.start % 60, second:0 },
+      length_seconds:r.len * 60,
+      period_seconds:r.cyc ? r.cyc.every * 60 : 604800,
+      ...(r.cyc ? { pulse_seconds:r.cyc.on * 60 } : {})
+    });
+  }));
+  const payload = { modified_intervals:[{ id:s.id, added_intervals:added, modified_intervals:[], removed_intervals:[] }] };
+  const body = `<p class="hint" style="margin:8px 0">${T('apiNote')}</p>
+    <pre class="json">${esc(JSON.stringify(payload, null, 2))}</pre>`;
+  return acc('api', T('apiTitle'), T('intervalsN', { n:added.length }), body);
+}
+
+/* ── right panel: day inspector ───────────────────────────────── */
+function viewInsp(){
+  const d = S.focusDay, list = (days()[d] || []).slice().sort((a, b) => a.start - b.start);
+  const covered = coveredOn(days(), d);
+  const own = list.reduce((n, r) => n + activeMinutes(r, r.len), 0);
+  const rows = list.map(r => `<div class="ivrow">
+      <input class="inp inp--time inp--sm" type="time" step="300" data-fk="f${r.id}" data-act="ivFrom" data-id="${r.id}" value="${hm(r.start)}" aria-label="${T('startAria')}">
+      <span class="subtle">–</span>
+      <input class="inp inp--time inp--sm" type="time" step="300" data-fk="t${r.id}" data-act="ivTo" data-id="${r.id}" value="${hm((r.start + r.len) % DAY_MIN)}" aria-label="${T('endAria')}">
+      <span class="ivrow__dur">${dur(r.len)}</span>
+      <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="ivCyc" data-id="${r.id}"
+        title="${r.cyc ? T('cycOnTitle', r.cyc) : T('cycOffTitle')}"
+        style="${r.cyc ? 'color:var(--accent)' : ''}">↻</button>
+      <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="ivDel" data-id="${r.id}" aria-label="${T('delIntervalAria')}">🗑</button>
+    </div>${r.start + r.len > DAY_MIN ? `<div class="hint" style="margin:-3px 0 2px 4px">${T('continuesTo', { t:fmt(r.start + r.len, S.use12), dIn:dayIn(nextDay(d)) })}</div>` : ''}`).join('');
+  const carry = (days()[prevDay(d)] || []).filter(r => r.start + r.len > DAY_MIN);
+
+  return `<aside class="insp">
+    <div class="insp__head">
+      <div class="insp__title">${dayName(d)}</div>
+      <div class="hint">${T('inspMeta', { n:list.length, own:dur(Math.round(own)), cov:covered ? dur(covered) : T('zeroMin') })}</div>
+      ${carry.length ? `<div class="hint">${T('plusCarryOver', { from:dayFrom(prevDay(d)) })}</div>` : ''}
+    </div>
+
+    <div class="insp__sec">
+      <span class="lbl">${T('quickFill')}</span>
+      <div class="row wrap" style="gap:5px">
+        <button class="btn btn--outline btn--sm" type="button" data-act="qAll">${T('allDay')}</button>
+        <button class="btn btn--outline btn--sm" type="button" data-act="qBiz">09:00–18:00</button>
+        <button class="btn btn--outline btn--sm" type="button" data-act="qNight">22:00–06:00</button>
+        <button class="btn btn--outline btn--sm" type="button" data-act="qInv">${T('invertDay')}</button>
+        <button class="btn btn--subtle btn--sm" type="button" data-act="qClear">${T('clear')}</button>
+      </div>
+    </div>
+
+    <div class="insp__sec">
+      <span class="lbl">${T('intervals')}</span>
+      ${rows || `<span class="hint">${T('noIntervals')}</span>`}
+      <button class="btn btn--outline btn--sm" type="button" data-act="ivAdd">${T('addInterval')}</button>
+    </div>
+
+    <div class="insp__sec">
+      <span class="lbl">${T('copyDayTo', { day:dayAcc(d) })}</span>
+      <div class="daychips">
+        ${DAYS.filter(x => x !== d).map(x => `<label class="daychk"><input type="checkbox" data-act="cpTgt" data-d="${x}" ${S.cpTargets && S.cpTargets.has(x) ? 'checked' : ''}> ${dayName(x)}</label>`).join('')}
+      </div>
+      <div class="row wrap" style="gap:5px">
+        <button class="btn btn--sm" type="button" data-act="cpAll">${T('selectAll')}</button>
+        <button class="btn btn--sm" type="button" data-act="cpWorkdays">${T('monFri')}</button>
+        <span class="grow"></span>
+        <button class="btn btn--outline btn--sm" type="button" data-act="cpMerge">${T('merge')}</button>
+        <button class="btn btn--primary btn--sm" type="button" data-act="cpReplace">${T('replace')}</button>
+      </div>
+      <p class="hint" style="margin:0">${T('copyModeNote')}</p>
+    </div>
+  </aside>`;
+}
+
+/* ── popovers & modal ─────────────────────────────────────────── */
+function viewPop(){
+  const p = S.pop; if(!p) return '';
+  const at = `left:${p.x}px;top:${p.y}px`;
+  if(p.kind === 'tpl'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at};min-width:268px">
+      <div class="pop__cap">${T('applyTemplate')}</div>
+      ${TEMPLATES.map(t => `<button class="pop__item" type="button" data-act="tplPick" data-v="${t.id}">
+        <span class="pop__bar" style="background-image:${strip(t.iv)}"></span>
+        <span class="grow"><b>${T('tpl_' + t.id)}</b><br><span class="hint">${T('tplN_' + t.id)}</span></span></button>`).join('')}
+    </div>`;
+  }
+  if(p.kind === 'day'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at}">
+      <div class="pop__cap">${dayName(p.day)}</div>
+      <button class="pop__item" type="button" data-act="dmFill"  data-d="${p.day}">${T('fill24')}</button>
+      <button class="pop__item" type="button" data-act="dmInv"   data-d="${p.day}">${T('invertDay')}</button>
+      <button class="pop__item" type="button" data-act="dmFocus" data-d="${p.day}">${T('openInInspector')}</button>
+      <hr class="sep" style="margin:4px 0">
+      <button class="pop__item pop__item--danger" type="button" data-act="dmClear" data-d="${p.day}">${T('clearDay')}</button>
+    </div>`;
+  }
+  if(p.kind === 'sched'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at}">
+      <button class="pop__item" type="button" data-act="smDup" data-id="${p.id}">${T('duplicate')}</button>
+      <button class="pop__item" type="button" data-act="smExport" data-id="${p.id}">${T('exportThis')}</button>
+      <hr class="sep" style="margin:4px 0">
+      <button class="pop__item pop__item--danger" type="button" data-act="smDel" data-id="${p.id}">${T('deleteEllipsis')}</button>
+    </div>`;
+  }
+  if(p.kind === 'copyFrom'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at}">
+      <div class="pop__cap">${T('copyFrom')}</div>
+      ${DAYS.map(d => `<button class="pop__item" type="button" data-act="cfPick" data-d="${d}">
+        ${dayName(d)} <span class="hint">(${days()[d].length})</span></button>`).join('')}
+    </div>`;
+  }
+  if(p.kind === 'copyIv'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at}">
+      <div class="pop__cap">${T('copyThisIntervalTo')}</div>
+      ${DAYS.filter(d => d !== S.sel.day).map(d => `<button class="pop__item" type="button" data-act="ciPick" data-d="${d}">${dayName(d)}</button>`).join('')}
+      <hr class="sep" style="margin:4px 0">
+      <button class="pop__item" type="button" data-act="ciAll">${T('allOtherDays')}</button>
+    </div>`;
+  }
+  return '';
+}
+function viewModal(){
+  const m = S.modal; if(!m) return '';
+  return `<div class="modal" role="alertdialog" aria-modal="true" aria-label="${esc(m.title)}">
+    <div class="modal__box">
+      <div class="modal__t">${esc(m.title)}</div>
+      <div class="modal__c">${m.msg}</div>
+      <div class="modal__a">
+        <button class="btn" type="button" data-act="modalNo">${T('btnCancel')}</button>
+        <button class="btn btn--primary" type="button" data-act="modalYes">${esc(m.label)}</button>
+      </div>
+    </div></div>`;
+}
+
+/* ═══════════════ EVENTS ═══════════════════════════════════════ */
+const snapv = v => Math.round(v / S.step) * S.step;
+function popAt(el, kind, extra){
+  const r = el.getBoundingClientRect();
+  S.pop = Object.assign({ kind, x:Math.min(r.left, innerWidth - 300), y:Math.min(r.bottom + 4, innerHeight - 260) }, extra || {});
+  render();
+}
+const ivById = (d, id) => (days()[d] || []).find(r => r.id === id);
+
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]'); if(!t) return;
+  const a = t.dataset.act, v = t.dataset.v, d = t.dataset.d, id = t.dataset.id;
+  const fd = () => S.focusDay;
+
+  switch(a){
+    /* chrome */
+    case 'theme': S.scheme = S.scheme === 'light' ? 'dark' : 'light'; render(); return;
+    case 'fmt': S.use12 = v === '12'; render(); return;
+
+    /* sidebar */
+    case 'pick':
+      if(S.dirty && id !== S.selectedId){
+        confirmThen(T('switchTitle'), T('switchMsg'), T('btnSwitch'),
+          () => { S.selectedId = id; S.sel = null; S.checked.clear(); render(); });
+        return;
+      }
+      S.selectedId = id; S.sel = null; S.checked.clear(); render(); return;
+    case 'add': addSchedule(); return;
+    case 'search': return;
+    case 'schedMenu': popAt(t, 'sched', { id }); return;
+    case 'smDup': S.pop = null; duplicateSchedule(id); return;
+    case 'smDel': S.pop = null; deleteSchedule(id); return;
+    case 'smExport': case 'export': S.pop = null; toast('info', T('exportToast')); render(); return;
+    case 'import': toast('info', T('importToast')); return;
+
+    /* header */
+    case 'del': deleteSchedule(S.selectedId); return;
+    case 'save': S.saved = snap(); S.dirty = false; cur().modified = '@now';
+      toast('success', T('savedToast')); render(); return;
+    case 'cancel': confirmThen(T('discardTitle'), T('discardMsg'), T('btnDiscard'),
+        () => { restore(S.saved); S.undo.length = 0; S.redo.length = 0; toast('info', T('discardedToast')); render(); }); return;
+
+    /* toolbar */
+    case 'tool': S.tool = v; render(); return;
+    case 'step': S.step = +v; render(); return;
+    case 'undo': doUndo(); return;
+    case 'redo': doRedo(); return;
+    case 'tplMenu': popAt(t, 'tpl'); return;
+    case 'tplPick': { const tpl = TEMPLATES.find(x => x.id === v); S.pop = null; applyTemplate(tpl); return; }
+    case 'invert': invertWeek(); return;
+    case 'clearWeek': clearWeek(); return;
+
+    /* grid */
+    case 'focusDay': S.focusDay = d; S.sel = null; render(); return;
+    case 'dayMenu': popAt(t, 'day', { day:d }); return;
+    case 'dmFill':  S.pop = null; edit(() => setDay(d, [{ id:nid(), start:0, len:DAY_MIN, cyc:null }])); return;
+    case 'dmClear': S.pop = null; edit(() => setDay(d, [])); return;
+    case 'dmInv':   S.pop = null; S.checked = new Set([d]); invertWeek(); S.checked.clear(); render(); return;
+    case 'dmFocus': S.pop = null; S.focusDay = d; render(); return;
+    case 'closePop': S.pop = null; render(); return;
+
+    /* multi-day bar */
+    case 'copyFrom': popAt(t, 'copyFrom'); return;
+    case 'cfPick': { const from = d; S.pop = null; copyDayTo(from, Array.from(S.checked), 'replace'); return; }
+    case 'clearChecked': edit(() => S.checked.forEach(x => setDay(x, []))); return;
+    case 'uncheckAll': S.checked.clear(); render(); return;
+
+    /* selected interval bar */
+    case 'delIv': if(S.sel) edit(() => { setDay(S.sel.day, days()[S.sel.day].filter(r => r.id !== S.sel.id)); S.sel = null; }); return;
+    case 'copyIv': popAt(t, 'copyIv'); return;
+    case 'ciPick': case 'ciAll': {
+      const r = S.sel && ivById(S.sel.day, S.sel.id); if(!r) { S.pop = null; render(); return; }
+      const targets = a === 'ciAll' ? DAYS.filter(x => x !== S.sel.day) : [d];
+      S.pop = null;
+      edit(() => targets.forEach(x => setDay(x, days()[x].concat([{ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null }]))));
+      toast('success', T('ivCopied', { n:targets.length })); return;
+    }
+
+    /* inspector quick fill */
+    case 'qAll':   edit(() => setDay(fd(), [{ id:nid(), start:0, len:DAY_MIN, cyc:null }])); return;
+    case 'qBiz':   edit(() => setDay(fd(), [{ id:nid(), start:540, len:540, cyc:null }])); return;
+    case 'qNight': edit(() => setDay(fd(), [{ id:nid(), start:1320, len:480, cyc:null }])); return;
+    case 'qClear': edit(() => setDay(fd(), [])); return;
+    case 'qInv':   S.checked = new Set([fd()]); invertWeek(); S.checked.clear(); render(); return;
+    case 'ivAdd':  edit(() => { const r = { id:nid(), start:540, len:120, cyc:null };
+      setDay(fd(), days()[fd()].concat([r])); S.sel = { day:fd(), id:r.id }; }); return;
+    case 'ivDel':  edit(() => setDay(fd(), days()[fd()].filter(r => r.id !== id))); return;
+    case 'ivCyc':  edit(() => { const r = ivById(fd(), id); if(r) r.cyc = r.cyc ? null : { every:30, on:5 }; }); return;
+
+    /* copy-this-day */
+    case 'cpTgt': S.cpTargets = S.cpTargets || new Set();
+      S.cpTargets.has(d) ? S.cpTargets.delete(d) : S.cpTargets.add(d); render(); return;
+    case 'cpAll': S.cpTargets = new Set(DAYS.filter(x => x !== fd())); render(); return;
+    case 'cpWorkdays': S.cpTargets = new Set(['Mon','Tue','Wed','Thu','Fri'].filter(x => x !== fd())); render(); return;
+    case 'cpMerge': case 'cpReplace': {
+      const tg = Array.from(S.cpTargets || []);
+      if(!tg.length){ toast('warning', T('checkTargetWarn')); return; }
+      copyDayTo(fd(), tg, a === 'cpMerge' ? 'merge' : 'replace'); S.cpTargets = new Set(); render(); return;
+    }
+
+    /* accordions */
+    case 'panel': S.panels[t.dataset.k] = !S.panels[t.dataset.k]; render(); return;
+    case 'exAdd': edit(() => cur().exceptions.push({ id:nid('e'), from:'', to:'', mode:'none', sameAs:'Sun', note:'', noteKey:null, yearly:false, iv:[] })); return;
+    case 'exDel': edit(() => cur().exceptions = cur().exceptions.filter(e => e.id !== id)); return;
+
+    /* modal */
+    case 'modalNo': S.modal = null; render(); return;
+    case 'modalYes': { const f = S.modal && S.modal.fn; S.modal = null; render(); if(f) f(); return; }
+  }
+});
+
+/* change / input handling */
+document.addEventListener('change', ev => {
+  const t = ev.target.closest('[data-act]'); if(!t) return;
+  const a = t.dataset.act, id = t.dataset.id, d = t.dataset.d, fd = S.focusDay;
+  switch(a){
+    case 'lang': S.lang = t.value; render(); return;
+    case 'check': t.checked ? S.checked.add(d) : S.checked.delete(d); S.sel = null; render(); return;
+    case 'holList': edit(() => cur().useHolidayList = t.checked); return;
+
+    case 'ivFrom': case 'ivTo': {
+      edit(() => {
+        const r = ivById(fd, id); if(!r) return;
+        if(a === 'ivFrom'){ const end = r.start + r.len; const s = Math.min(parseHM(t.value), DAY_MIN - S.step);
+          r.start = s; r.len = Math.max(S.step, end - s); }
+        else { let e = parseHM(t.value); if(e <= r.start) e += DAY_MIN; r.len = Math.max(S.step, e - r.start); }
+        setDay(fd, days()[fd]);
+      }); return;
+    }
+    case 'selFrom': case 'selTo': {
+      if(!S.sel) return;
+      edit(() => {
+        const r = ivById(S.sel.day, S.sel.id); if(!r) return;
+        if(a === 'selFrom'){ const end = r.start + r.len; r.start = Math.min(parseHM(t.value), DAY_MIN - S.step); r.len = Math.max(S.step, end - r.start); }
+        else { let e = parseHM(t.value); if(e <= r.start) e += DAY_MIN; r.len = Math.max(S.step, e - r.start); }
+        setDay(S.sel.day, days()[S.sel.day]);
+      }); return;
+    }
+    case 'selCyc': edit(() => { const r = ivById(S.sel.day, S.sel.id); if(r) r.cyc = t.checked ? { every:30, on:5 } : null; }); return;
+    case 'cycOn':    edit(() => { const r = ivById(S.sel.day, S.sel.id); if(r && r.cyc) r.cyc.on = Math.max(1, Math.min(+t.value || 1, r.cyc.every)); }); return;
+    case 'cycEvery': edit(() => { const r = ivById(S.sel.day, S.sel.id); if(r && r.cyc){ r.cyc.every = Math.max(1, +t.value || 1); r.cyc.on = Math.min(r.cyc.on, r.cyc.every); } }); return;
+
+    case 'exFrom': edit(() => { const e = cur().exceptions.find(x => x.id === id); e.from = t.value; if(!e.to || e.to < e.from) e.to = e.from; }); return;
+    case 'exTo':   edit(() => { cur().exceptions.find(x => x.id === id).to = t.value; }); return;
+    case 'exMode': edit(() => { const e = cur().exceptions.find(x => x.id === id); e.mode = t.value;
+      if(e.mode === 'custom' && !e.iv.length) e.iv = [{ id:nid(), start:540, len:480, cyc:null }]; }); return;
+    case 'exSame': edit(() => { cur().exceptions.find(x => x.id === id).sameAs = t.value; }); return;
+    case 'exYear': edit(() => { cur().exceptions.find(x => x.id === id).yearly = t.checked; }); return;
+    case 'exCFrom': edit(() => { const e = cur().exceptions.find(x => x.id === id);
+      if(!e.iv.length) e.iv = [{ id:nid(), start:540, len:480, cyc:null }];
+      const end = e.iv[0].start + e.iv[0].len; e.iv[0].start = parseHM(t.value);
+      e.iv[0].len = Math.max(15, end - e.iv[0].start); }); return;
+    case 'exCTo': edit(() => { const e = cur().exceptions.find(x => x.id === id);
+      if(!e.iv.length) e.iv = [{ id:nid(), start:540, len:480, cyc:null }];
+      let en = parseHM(t.value); if(en <= e.iv[0].start) en += DAY_MIN;
+      e.iv[0].len = Math.max(15, en - e.iv[0].start); }); return;
+
+    case 'vFrom':  edit(() => cur().validFrom = t.value); return;
+    case 'vTo':    edit(() => cur().validTo = t.value); return;
+    case 'repeat': edit(() => cur().repeatDays = Math.max(0, +t.value || 0)); return;
+  }
+});
+document.addEventListener('input', ev => {
+  const t = ev.target.closest('[data-act]'); if(!t) return;
+  if(t.dataset.act === 'search'){ S.search = t.value; render(); }
+  // A user-entered name/note detaches the object from its translatable demo key.
+  else if(t.dataset.act === 'rename'){ cur().name = t.value; cur().nameKey = null; S.dirty = snap() !== S.saved; render(); }
+  else if(t.dataset.act === 'exNote'){ const e = cur().exceptions.find(x => x.id === t.dataset.id);
+    if(e){ e.note = t.value; e.noteKey = null; S.dirty = true; } }
+});
+
+/* ── grid drag: paint / erase / move / resize ─────────────────── */
+document.addEventListener('mousedown', ev => {
+  const track = ev.target.closest('.track'); if(!track || ev.button !== 0) return;
+  const day = track.dataset.track, rect = track.getBoundingClientRect();
+  const toMin = x => Math.max(0, Math.min(DAY_MIN, (x - rect.left) / rect.width * DAY_MIN));
+  const blk = ev.target.closest('.blk');
+
+  if(blk && blk.dataset.cont === '1'){                       // continuation → jump to its owner
+    S.focusDay = blk.dataset.owner; S.sel = { day:blk.dataset.owner, id:blk.dataset.blk }; render(); return;
+  }
+  if(blk && S.tool === 'erase'){                             // erase drags start on top of blocks too
+    ev.preventDefault();
+    S.focusDay = day; S.sel = null;
+    S.drag = { kind:'erase', day, rect, a:snapv(toMin(ev.clientX)), b:snapv(toMin(ev.clientX)), moved:false, pushed:false };
+    render(); return;
+  }
+  if(blk){
+    const r = ivById(day, blk.dataset.blk); if(!r) return;
+    ev.preventDefault();
+    S.sel = { day, id:r.id }; S.focusDay = day; S.checked.clear();
+    const handle = ev.target.closest('.blk__h');
+    S.drag = { kind: handle ? (handle.dataset.h === 'l' ? 'left' : 'right') : 'move',
+      day, id:r.id, rect, x0:ev.clientX, s0:r.start, l0:r.len, moved:false, pushed:false };
+    render(); return;
+  }
+  // empty track → paint or erase
+  ev.preventDefault();
+  S.focusDay = day; S.sel = null;
+  S.drag = { kind:S.tool === 'erase' ? 'erase' : 'paint', day, rect, a:snapv(toMin(ev.clientX)), b:snapv(toMin(ev.clientX)), moved:false, pushed:false };
+  render();
+});
+document.addEventListener('mousemove', ev => {
+  const g = S.drag; if(!g) return;
+  const toMin = x => Math.max(0, Math.min(DAY_MIN, (x - g.rect.left) / g.rect.width * DAY_MIN));
+  g.moved = true;
+  if(g.kind === 'paint' || g.kind === 'erase'){
+    g.b = snapv(toMin(ev.clientX)); drawGhost(g);
+  } else {
+    const dm = snapv((ev.clientX - g.x0) / g.rect.width * DAY_MIN);
+    if(!dm && !g.pushed) return;                             // ignore sub-step jitter
+    const r = ivById(g.day, g.id); if(!r) return;
+    if(!g.pushed){ g.pushed = true; pushUndo(); }
+    if(g.kind === 'move')       { r.start = Math.max(0, Math.min(g.s0 + dm, DAY_MIN - S.step)); r.len = g.l0; }
+    else if(g.kind === 'left')  { const end = g.s0 + g.l0; r.start = Math.max(0, Math.min(g.s0 + dm, end - S.step)); r.len = end - r.start; }
+    else                        { r.len = Math.max(S.step, Math.min(g.l0 + dm, DAY_MIN * 2 - r.start)); }
+    render();
+  }
+});
+document.addEventListener('mouseup', () => {
+  const g = S.drag; if(!g) return; S.drag = null; clearGhost();
+  if(g.kind === 'paint'){
+    const from = Math.min(g.a, g.b), to = Math.max(g.a, g.b);
+    const len = to - from || 120;                             // a simple click drops a default 2 h interval
+    pushUndo();
+    const r = { id:nid(), start:Math.min(from, DAY_MIN - S.step), len:Math.max(S.step, Math.min(len, DAY_MIN - from)), cyc:null };
+    setDay(g.day, days()[g.day].concat([r]));
+    const merged = (days()[g.day] || []).find(x => x.start <= r.start && x.start + x.len >= r.start + r.len);
+    S.sel = merged ? { day:g.day, id:merged.id } : null;
+    S.dirty = snap() !== S.saved; render(); return;
+  }
+  if(g.kind === 'erase'){
+    const from = Math.min(g.a, g.b), to = Math.max(g.a, g.b);
+    pushUndo(); setDay(g.day, subtract(days()[g.day], from, to === from ? to + S.step : to));
+    S.dirty = snap() !== S.saved; render(); return;
+  }
+  if(!g.pushed){ render(); return; }                           // click without movement: nothing to commit
+  setDay(g.day, days()[g.day]);                                // commit + merge overlaps
+  const still = ivById(g.day, g.id);
+  if(!still) S.sel = (days()[g.day] || []).length ? { day:g.day, id:days()[g.day][0].id } : null;
+  S.dirty = snap() !== S.saved; render();
+});
+function drawGhost(g){
+  const track = shell.querySelector(`.track[data-track="${g.day}"]`); if(!track) return;
+  let el = track.querySelector('.ghost');
+  if(!el){ el = document.createElement('div'); el.className = 'ghost' + (g.kind === 'erase' ? ' ghost--erase' : ''); track.appendChild(el); }
+  const from = Math.min(g.a, g.b), to = Math.max(g.a, g.b);
+  el.style.left = (from / DAY_MIN * 100) + '%';
+  el.style.width = (Math.max(to - from, 4) / DAY_MIN * 100) + '%';
+  el.textContent = to - from >= 90 ? `${fmt(from, S.use12)} – ${fmt(to, S.use12)}` : '';
+}
+function clearGhost(){ shell.querySelectorAll('.ghost').forEach(e => e.remove()); }
+
+/* double-click a block opens it in the inspector */
+document.addEventListener('dblclick', ev => {
+  const blk = ev.target.closest('.blk'); if(!blk) return;
+  const owner = blk.dataset.owner;
+  S.focusDay = owner; S.sel = { day:owner, id:blk.dataset.blk }; render();
+});
+
+/* keyboard */
+document.addEventListener('keydown', ev => {
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName);
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z'){ ev.preventDefault(); ev.shiftKey ? doRedo() : doUndo(); return; }
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y'){ ev.preventDefault(); doRedo(); return; }
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's'){ ev.preventDefault();
+    if(S.dirty){ S.saved = snap(); S.dirty = false; toast('success', T('savedShort')); render(); } return; }
+  if(ev.key === 'Escape'){ if(S.modal){ S.modal = null; render(); } else if(S.pop){ S.pop = null; render(); } else if(S.sel){ S.sel = null; render(); } return; }
+  if(typing) return;
+  if(!S.sel) return;
+  const r = ivById(S.sel.day, S.sel.id); if(!r) return;
+  if(ev.key === 'Delete' || ev.key === 'Backspace'){ ev.preventDefault();
+    edit(() => { setDay(S.sel.day, days()[S.sel.day].filter(x => x.id !== S.sel.id)); S.sel = null; }); return; }
+  if(ev.key === 'ArrowLeft' || ev.key === 'ArrowRight'){
+    ev.preventDefault();
+    const k = ev.key === 'ArrowLeft' ? -S.step : S.step;
+    edit(() => { const x = ivById(S.sel.day, S.sel.id);
+      if(ev.shiftKey) x.len = Math.max(S.step, x.len + k);
+      else x.start = Math.max(0, Math.min(x.start + k, DAY_MIN - S.step)); });
+  }
+});
+
+/* keep the "now" marker and Active-now pills honest */
+setInterval(() => { if(!S.drag && !S.pop && !S.modal) render(); }, 30000);
+
+render();
+</script>
+</body>
+</html>
