@@ -115,9 +115,22 @@ kbd{display:inline-block;min-width:16px;padding:0 4px;border:1px solid var(--bor
   background-position:calc(100% - 12px) 12px,calc(100% - 8px) 12px;background-size:4px 4px,4px 4px}
 .langsel:focus{outline:none;border-color:var(--accent-hover);box-shadow:0 0 0 1px var(--accent-hover)}
 .shell{display:flex;align-items:stretch;height:calc(100vh - 44px);overflow:hidden}
+body[data-resizing]{cursor:col-resize}
+body[data-resizing] *{user-select:none!important}
+
+/* ── panel splitters ──────────────────────────────────────────── */
+.splitter{flex:none;width:7px;position:relative;cursor:col-resize;background:transparent;z-index:9}
+.splitter::before{content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:var(--border-default);
+  transition:background .12s,left .12s,width .12s}
+/* always-visible grip so the handle is discoverable, accent on hover/drag */
+.splitter::after{content:"";position:absolute;top:50%;left:2px;width:3px;height:28px;margin-top:-14px;
+  border-radius:2px;background:var(--border-strong);opacity:.5;transition:opacity .12s,background .12s}
+.splitter:hover::before,.splitter--drag::before,.splitter:focus-visible::before{left:2px;width:3px;background:var(--accent)}
+.splitter:hover::after,.splitter--drag::after,.splitter:focus-visible::after{opacity:1;background:var(--accent)}
+.splitter:focus-visible{outline:none}
 
 /* ── left: schedule list ─────────────────────────────────────── */
-.side{width:268px;flex:none;background:var(--bg-surface);border-right:1px solid var(--border-default);
+.side{width:268px;flex:none;background:var(--bg-surface);
   display:flex;flex-direction:column;min-height:0}
 .side__head{padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px}
 .side__title{font-size:var(--fs-h3);font-weight:600}
@@ -209,8 +222,9 @@ pre.json{margin:0;max-height:230px;overflow:auto;background:var(--bg-muted);bord
   border-radius:var(--r-ctl);padding:10px;font-family:var(--mono);font-size:var(--fs-body);line-height:1.55}
 
 /* ── right: day inspector ─────────────────────────────────────── */
-.insp{width:306px;flex:none;background:var(--bg-surface);border-left:1px solid var(--border-default);
-  display:flex;flex-direction:column;min-height:0;overflow:auto}
+.insp{width:306px;flex:none;background:var(--bg-surface);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.insp__scroll{flex:1;min-height:0;overflow:auto}
 .insp__head{padding:13px 14px 10px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--border-default)}
 .insp__title{font-size:var(--fs-h3);font-weight:600}
 .insp__sec{padding:11px 14px;border-bottom:1px solid var(--border-default);display:flex;flex-direction:column;gap:8px}
@@ -218,6 +232,20 @@ pre.json{margin:0;max-height:230px;overflow:auto;background:var(--bg-muted);bord
 .ivrow__dur{width:62px;flex:none;text-align:right;font-size:var(--fs-body);color:var(--fg-muted);font-variant-numeric:tabular-nums}
 .daychips{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .daychk{display:flex;align-items:center;gap:6px;font-size:var(--fs-body);cursor:pointer}
+
+/* ── status bar (bottom of the inspector) ─────────────────────── */
+.statusbar{flex:none;padding:8px 14px 10px;background:var(--bg-muted);
+  border-top:1px solid var(--border-default);display:flex;flex-direction:column;gap:6px}
+/* Both notices share one font — only the colour tells them apart. */
+.statusbar__msg{min-height:15px;font-size:var(--fs-body);font-weight:600;line-height:1.35;color:transparent}
+.statusbar__msg[data-kind=warning]{color:var(--status-warning)}
+.statusbar__msg[data-kind=success]{color:var(--status-success)}
+.statusbar__msg[data-kind=info]{color:var(--status-info)}
+.statusbar__msg[data-kind=danger]{color:var(--danger)}
+.statusbar__clock{display:flex;align-items:baseline;gap:8px;border-top:1px solid var(--border-default);padding-top:7px}
+.statusbar__day{flex:1;min-width:0;font-size:var(--fs-body);color:var(--fg-muted);line-height:1.35}
+.statusbar__time{flex:none;font-size:var(--fs-h2);font-weight:600;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums;color:var(--fg-default)}
 
 /* ── overlays ─────────────────────────────────────────────────── */
 .pop{position:fixed;z-index:60;background:var(--bg-popup);border:1px solid var(--border-popup);
@@ -235,22 +263,13 @@ pre.json{margin:0;max-height:230px;overflow:auto;background:var(--bg-muted);bord
 .modal__t{padding:14px 16px 0;font-size:var(--fs-h3);font-weight:600}
 .modal__c{padding:8px 16px 16px;font-size:var(--fs-ctl);color:var(--fg-muted);line-height:1.55}
 .modal__a{display:flex;justify-content:flex-end;gap:8px;padding:0 16px 16px}
-.toasts{position:fixed;top:56px;right:16px;z-index:90;display:flex;flex-direction:column;gap:8px;width:352px}
-.toast{display:flex;gap:9px;padding:9px 11px;border-radius:var(--r-box);border:1px solid;font-size:var(--fs-body);
-  line-height:1.5;box-shadow:var(--shadow-popup);background:var(--bg-surface)}
-.toast--success{border-color:var(--status-success);background:var(--fb-success)}
-.toast--info{border-color:var(--status-info);background:var(--fb-info)}
-.toast--warning{border-color:var(--status-warning);background:var(--fb-warning)}
-.toast--danger{border-color:var(--danger);background:var(--fb-danger)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-@media (max-width:1280px){.insp{width:264px}.side{width:230px}}
 </style>
 </head>
 <body data-scheme="light">
 
 <div class="appbar" id="appbar"></div>
 <div class="shell" id="shell"></div>
-<div class="toasts" id="toasts"></div>
 <div id="overlays"></div>
 
 <script>
@@ -280,7 +299,10 @@ let uid = 1; const nid = p => (p||'i') + (uid++);
    notes) is stored as *keys* — so switching the language relabels the
    sample data without touching anything the user has renamed.
    ═══════════════════════════════════════════════════════════════ */
-const LANGS = [{ id:'en', label:'English' }, { id:'ru', label:'Русский' }];
+const LANGS = [
+  { id:'en', label:'English', locale:'en-US' },
+  { id:'ru', label:'Русский', locale:'ru-RU' }
+];
 /** Russian plural picker: 1 день / 2 дня / 5 дней. */
 const pl = (n, one, few, many) => {
   const a = n % 10, b = n % 100;
@@ -363,6 +385,10 @@ en: {
   referenceTime:'Reference time',
   referenceNote:'Times are stored as offsets inside the week and evaluated in the <b>server’s local time</b>, so a DST change shifts the wall-clock window, not the offset. Add an exception date if a specific transition day must be handled differently.',
   audit:'Audit', lastModified:'Last modified', identifier:'Identifier', justNowYou:'just now · you',
+  /* status bar */
+  statusAria:'Editor status', clockTitle:'Server local time — schedules are evaluated against it',
+  resizeSideAria:'Resize the schedule list', resizeInspAria:'Resize the day inspector',
+  resizeTitle:'Drag to resize · double-click to reset · ←/→ when focused',
   /* api */
   apiTitle:'API payload preview', intervalsN:p => `${p.n} interval${p.n === 1 ? '' : 's'}`,
   apiNote:'Read-only preview of the request the editor would send on Save — matches the <code>added / modified / removed_intervals</code> shape with <code>start</code>, <code>length_seconds</code> and <code>period_seconds</code> used by the configurator API.',
@@ -503,6 +529,9 @@ ru: {
   referenceTime:'Точка отсчёта времени',
   referenceNote:'Интервалы хранятся как смещения внутри недели и вычисляются по <b>локальному времени сервера</b>, поэтому переход на летнее время сдвигает «настенное» окно, а не смещение. Если конкретный день перехода нужно обработать иначе — добавьте дату-исключение.',
   audit:'Аудит', lastModified:'Последнее изменение', identifier:'Идентификатор', justNowYou:'только что · вы',
+  statusAria:'Состояние редактора', clockTitle:'Локальное время сервера — по нему вычисляются расписания',
+  resizeSideAria:'Изменить ширину списка расписаний', resizeInspAria:'Изменить ширину панели дня',
+  resizeTitle:'Потяните, чтобы изменить ширину · двойной клик — сброс · ←/→ при фокусе',
   apiTitle:'Предпросмотр запроса к API', intervalsN:p => `${p.n} ${pl(p.n,'интервал','интервала','интервалов')}`,
   apiNote:'Предпросмотр запроса, который редактор отправит при сохранении, — соответствует структуре <code>added / modified / removed_intervals</code> с полями <code>start</code>, <code>length_seconds</code> и <code>period_seconds</code>, используемой API конфигуратора.',
   inspMeta:p => `${pl(p.n,'Задан','Заданы','Задано')} ${p.n} ${pl(p.n,'интервал','интервала','интервалов')} · ${p.own} собственных · покрыто в этом дне: <b>${p.cov}</b>`,
@@ -724,12 +753,17 @@ const schedName = s => s.name || (s.nameKey ? T(s.nameKey) : '');
 const excNote   = e => e.note || (e.noteKey ? T(e.noteKey) : '');
 
 /* ── state ────────────────────────────────────────────────────── */
+/* Panel width limits; the editor in the middle always keeps MAIN_MIN px. */
+const PANEL = { side:{ min:200, max:460, def:268 }, insp:{ min:256, max:520, def:306 } };
+const MAIN_MIN = 520;
+
 const S = Object.assign({
   search:'', tool:'draw', step:15, use12:false, scheme:'light', lang:'en',
   checked:new Set(), focusDay:todayKey(), sel:null,
   undo:[], redo:[], dirty:false, saved:null,
   panels:{ usedIn:false, exceptions:false, advanced:false, api:false },
-  pop:null, modal:null, toasts:[], drag:null
+  sideW:PANEL.side.def, inspW:PANEL.insp.def,
+  pop:null, modal:null, msg:null, drag:null, rs:null
 }, seed());
 S.saved = snap();
 
@@ -746,10 +780,30 @@ function doRedo(){ if(!S.redo.length) return; S.undo.push(snap()); restore(S.red
 function edit(fn){ pushUndo(); fn(); S.dirty = snap() !== S.saved; render(); }
 function setDay(d, list){ days()[d] = normalize(list); }
 
-function toast(type, text, ms){
-  const t = { id:nid('t'), type, text };
-  S.toasts.push(t); renderToasts();
-  setTimeout(() => { S.toasts = S.toasts.filter(x => x.id !== t.id); renderToasts(); }, ms || 3200);
+/** Transient status line in the inspector footer (replaces the old corner toasts). */
+const MSG_MS = 4500, MSG_MS_SAVE = 6500;
+function notify(kind, text, ms){
+  const m = { id:nid('m'), kind, text };
+  S.msg = m; render();
+  setTimeout(() => { if(S.msg && S.msg.id === m.id){ S.msg = null; render(); } }, ms || MSG_MS);
+}
+/** What the footer shows: a transient message wins, otherwise the unsaved-changes notice. */
+function statusMsg(){
+  if(S.msg) return S.msg;
+  if(S.dirty) return { kind:'warning', text:T('unsaved') };
+  return null;
+}
+/** Current date / weekday / time in the selected locale, honouring the 24h–12h toggle. */
+const localeOf = () => (LANGS.find(l => l.id === S.lang) || LANGS[0]).locale;
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+function clockParts(){
+  const d = new Date(), loc = localeOf();
+  return {
+    day: capFirst(d.toLocaleDateString(loc, { weekday:'long' })) + ', ' +
+         d.toLocaleDateString(loc, { day:'numeric', month:'long', year:'numeric' }),
+    time: d.toLocaleTimeString(loc, { hour:S.use12 ? 'numeric' : '2-digit',
+      minute:'2-digit', second:'2-digit', hour12:S.use12 })
+  };
 }
 function confirmThen(title, msg, label, fn){ S.modal = { title, msg, label, fn }; render(); }
 
@@ -772,14 +826,14 @@ function duplicateSchedule(id){
 }
 function usageCount(s){ const u = s.usedIn || {}; return ['roles','macros','archive','exportTasks','replication'].reduce((n, k) => n + (u[k] || []).length, 0); }
 function deleteSchedule(id){
-  if(S.order.length <= 1){ toast('warning', T('lastScheduleWarn')); return; }
+  if(S.order.length <= 1){ notify('warning', T('lastScheduleWarn')); return; }
   const s = S.items[id], n = usageCount(s), name = esc(schedName(s));
   confirmThen(T('delSchedTitle'),
     n ? T('delSchedRefs', { name, n }) : T('delSchedNoRefs', { name }),
     T('btnDelete'), () => {
       edit(() => { delete S.items[id]; S.order = S.order.filter(x => x !== id);
         if(S.selectedId === id) S.selectedId = S.order[0]; });
-      toast(n ? 'warning' : 'info', n ? T('deletedRefs', { name, n }) : T('deleted', { name }), n ? 6000 : 3000);
+      notify(n ? 'warning' : 'info', n ? T('deletedRefs', { name, n }) : T('deleted', { name }), n ? 6000 : 3000);
     });
 }
 function applyTemplate(tpl){
@@ -825,7 +879,7 @@ function copyDayTo(from, targets, mode){
       setDay(d, mode === 'merge' ? days()[d].concat(clone) : clone);
     });
   });
-  toast('success', T('dayCopied', { day:dayName(from), n:targets.filter(d => d !== from).length }));
+  notify('success', T('dayCopied', { day:dayName(from), n:targets.filter(d => d !== from).length }));
 }
 
 /* ═══════════════ RENDER ═══════════════════════════════════════ */
@@ -840,16 +894,25 @@ function paint(){
   document.documentElement.setAttribute('lang', S.lang);
   document.title = T('sideTitle') + ' — ' + T('brand') + ' (v3)';
   document.getElementById('appbar').innerHTML = viewAppbar();
-  shell.innerHTML = viewSide() + viewMain() + viewInsp();
+  shell.innerHTML = viewSide() + splitter('side') + viewMain() + splitter('insp') + viewInsp();
   document.getElementById('overlays').innerHTML = viewPop() + viewModal();
   if(fk){
     const el = shell.querySelector(`[data-fk="${fk}"]`) || document.querySelector(`[data-fk="${fk}"]`);
     if(el){ el.focus(); try{ el.setSelectionRange(selStart, selEnd); }catch(e){} }
   }
 }
-function renderToasts(){
-  document.getElementById('toasts').innerHTML = S.toasts.map(t =>
-    `<div class="toast toast--${t.type}" role="status"><span>${t.text}</span></div>`).join('');
+/** Ticks the footer clock in place — a full re-render every second would fight with typing. */
+function tickClock(){
+  const c = clockParts();
+  const d = shell.querySelector('[data-clk=day]'), t = shell.querySelector('[data-clk=time]');
+  if(d) d.textContent = c.day;
+  if(t) t.textContent = c.time;
+}
+function splitter(which){
+  const w = which === 'side' ? S.sideW : S.inspW, p = PANEL[which];
+  return `<div class="splitter" data-split="${which}" role="separator" aria-orientation="vertical" tabindex="0"
+    aria-label="${which === 'side' ? T('resizeSideAria') : T('resizeInspAria')}" title="${T('resizeTitle')}"
+    aria-valuenow="${w}" aria-valuemin="${p.min}" aria-valuemax="${p.max}"></div>`;
 }
 
 /* ── top bar ──────────────────────────────────────────────────── */
@@ -894,7 +957,7 @@ function viewSide(){
         aria-label="${T('schedActionsAria')}">⋯</button>
     </div>`;
   }).join('');
-  return `<aside class="side">
+  return `<aside class="side" style="width:${S.sideW}px">
     <div class="side__head">
       <div class="side__title">${T('sideTitle')}</div>
       <p class="hint" style="margin:0">${T('sideNote')}</p>
@@ -919,7 +982,6 @@ function viewMain(){
       <input class="inp" data-fk="name" data-act="rename" value="${esc(schedName(s))}" aria-label="${T('nameAria')}" style="width:236px;flex:none">
       <span class="pill" title="${T('coverageTitle')}">${T('coverage', { d:dur(wk), pct:cov })}</span>
       <span class="pill ${live ? 'pill--live' : 'pill--idle'}">${live ? T('activeNow') : T('inactiveNow')}</span>
-      ${S.dirty ? `<span class="pill" style="background:var(--fb-warning);color:var(--status-warning)">${T('unsaved')}</span>` : ''}
       <span class="grow"></span>
       <button class="btn btn--danger" type="button" data-act="del">${T('btnDelete')}</button>
       <button class="btn" type="button" data-act="cancel" ${S.dirty ? '' : 'disabled'}>${T('btnCancel')}</button>
@@ -1145,7 +1207,8 @@ function viewInsp(){
     </div>${r.start + r.len > DAY_MIN ? `<div class="hint" style="margin:-3px 0 2px 4px">${T('continuesTo', { t:fmt(r.start + r.len, S.use12), dIn:dayIn(nextDay(d)) })}</div>` : ''}`).join('');
   const carry = (days()[prevDay(d)] || []).filter(r => r.start + r.len > DAY_MIN);
 
-  return `<aside class="insp">
+  return `<aside class="insp" style="width:${S.inspW}px">
+    <div class="insp__scroll">
     <div class="insp__head">
       <div class="insp__title">${dayName(d)}</div>
       <div class="hint">${T('inspMeta', { n:list.length, own:dur(Math.round(own)), cov:covered ? dur(covered) : T('zeroMin') })}</div>
@@ -1183,7 +1246,22 @@ function viewInsp(){
       </div>
       <p class="hint" style="margin:0">${T('copyModeNote')}</p>
     </div>
+    </div>
+    ${viewStatus()}
   </aside>`;
+}
+
+/* ── inspector footer: save state + locale-formatted clock ────── */
+function viewStatus(){
+  const m = statusMsg(), c = clockParts();
+  return `<div class="statusbar">
+    <div class="statusbar__msg" data-kind="${m ? m.kind : 'none'}" role="status"
+      aria-live="polite" aria-label="${T('statusAria')}">${m ? esc(m.text) : ''}</div>
+    <div class="statusbar__clock" title="${T('clockTitle')}">
+      <span class="statusbar__day" data-clk="day">${c.day}</span>
+      <span class="statusbar__time" data-clk="time">${c.time}</span>
+    </div>
+  </div>`;
 }
 
 /* ── popovers & modal ─────────────────────────────────────────── */
@@ -1278,15 +1356,15 @@ document.addEventListener('click', ev => {
     case 'schedMenu': popAt(t, 'sched', { id }); return;
     case 'smDup': S.pop = null; duplicateSchedule(id); return;
     case 'smDel': S.pop = null; deleteSchedule(id); return;
-    case 'smExport': case 'export': S.pop = null; toast('info', T('exportToast')); render(); return;
-    case 'import': toast('info', T('importToast')); return;
+    case 'smExport': case 'export': S.pop = null; notify('info', T('exportToast')); render(); return;
+    case 'import': notify('info', T('importToast')); return;
 
     /* header */
     case 'del': deleteSchedule(S.selectedId); return;
     case 'save': S.saved = snap(); S.dirty = false; cur().modified = '@now';
-      toast('success', T('savedToast')); render(); return;
+      notify('success', T('savedToast'), MSG_MS_SAVE); render(); return;
     case 'cancel': confirmThen(T('discardTitle'), T('discardMsg'), T('btnDiscard'),
-        () => { restore(S.saved); S.undo.length = 0; S.redo.length = 0; toast('info', T('discardedToast')); render(); }); return;
+        () => { restore(S.saved); S.undo.length = 0; S.redo.length = 0; notify('info', T('discardedToast')); render(); }); return;
 
     /* toolbar */
     case 'tool': S.tool = v; render(); return;
@@ -1321,7 +1399,7 @@ document.addEventListener('click', ev => {
       const targets = a === 'ciAll' ? DAYS.filter(x => x !== S.sel.day) : [d];
       S.pop = null;
       edit(() => targets.forEach(x => setDay(x, days()[x].concat([{ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null }]))));
-      toast('success', T('ivCopied', { n:targets.length })); return;
+      notify('success', T('ivCopied', { n:targets.length })); return;
     }
 
     /* inspector quick fill */
@@ -1342,7 +1420,7 @@ document.addEventListener('click', ev => {
     case 'cpWorkdays': S.cpTargets = new Set(['Mon','Tue','Wed','Thu','Fri'].filter(x => x !== fd())); render(); return;
     case 'cpMerge': case 'cpReplace': {
       const tg = Array.from(S.cpTargets || []);
-      if(!tg.length){ toast('warning', T('checkTargetWarn')); return; }
+      if(!tg.length){ notify('warning', T('checkTargetWarn')); return; }
       copyDayTo(fd(), tg, a === 'cpMerge' ? 'merge' : 'replace'); S.cpTargets = new Set(); render(); return;
     }
 
@@ -1416,6 +1494,48 @@ document.addEventListener('input', ev => {
   else if(t.dataset.act === 'exNote'){ const e = cur().exceptions.find(x => x.id === t.dataset.id);
     if(e){ e.note = t.value; e.noteKey = null; S.dirty = true; } }
 });
+
+/* ── panel resizing ───────────────────────────────────────────── */
+/** Clamp a panel width to its own limits and to whatever the editor can spare. */
+function clampPanel(which, w){
+  const p = PANEL[which], other = which === 'side' ? S.inspW : S.sideW;
+  const spare = Math.max(p.min, innerWidth - other - MAIN_MIN - 14);
+  return Math.round(Math.max(p.min, Math.min(w, p.max, spare)));
+}
+function setPanel(which, w){
+  const v = clampPanel(which, w);
+  if(which === 'side') S.sideW = v; else S.inspW = v;
+  const el = shell.querySelector(which === 'side' ? '.side' : '.insp');
+  if(el) el.style.width = v + 'px';                          // live feedback without a full render
+  const sp = shell.querySelector(`.splitter[data-split="${which}"]`);
+  if(sp) sp.setAttribute('aria-valuenow', v);
+  return v;
+}
+document.addEventListener('mousedown', ev => {
+  const sp = ev.target.closest('.splitter'); if(!sp || ev.button !== 0) return;
+  ev.preventDefault();
+  const which = sp.dataset.split;
+  S.rs = { which, x0:ev.clientX, w0:which === 'side' ? S.sideW : S.inspW };
+  sp.classList.add('splitter--drag');
+  document.body.dataset.resizing = '1';
+});
+document.addEventListener('mousemove', ev => {
+  const g = S.rs; if(!g) return;
+  const dx = ev.clientX - g.x0;
+  setPanel(g.which, g.w0 + (g.which === 'side' ? dx : -dx));  // right panel grows leftwards
+});
+document.addEventListener('mouseup', () => {
+  if(!S.rs) return;
+  S.rs = null;
+  delete document.body.dataset.resizing;
+  shell.querySelectorAll('.splitter--drag').forEach(e => e.classList.remove('splitter--drag'));
+  render();
+});
+document.addEventListener('dblclick', ev => {
+  const sp = ev.target.closest('.splitter'); if(!sp) return;
+  setPanel(sp.dataset.split, PANEL[sp.dataset.split].def); render();
+});
+addEventListener('resize', () => { setPanel('side', S.sideW); setPanel('insp', S.inspW); render(); });
 
 /* ── grid drag: paint / erase / move / resize ─────────────────── */
 document.addEventListener('mousedown', ev => {
@@ -1508,11 +1628,23 @@ document.addEventListener('dblclick', ev => {
 
 /* keyboard */
 document.addEventListener('keydown', ev => {
+  // a focused splitter owns the arrow keys
+  const sp = ev.target.classList && ev.target.classList.contains('splitter') ? ev.target : null;
+  if(sp && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')){
+    ev.preventDefault();
+    const k = (ev.key === 'ArrowLeft' ? -1 : 1) * (ev.shiftKey ? 48 : 16);
+    const which = sp.dataset.split;
+    setPanel(which, (which === 'side' ? S.sideW : S.inspW) + (which === 'side' ? k : -k));
+    return;
+  }
+  if(sp && (ev.key === 'Home' || ev.key === 'Enter')){
+    ev.preventDefault(); setPanel(sp.dataset.split, PANEL[sp.dataset.split].def); render(); return;
+  }
   const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName);
   if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z'){ ev.preventDefault(); ev.shiftKey ? doRedo() : doUndo(); return; }
   if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y'){ ev.preventDefault(); doRedo(); return; }
   if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's'){ ev.preventDefault();
-    if(S.dirty){ S.saved = snap(); S.dirty = false; toast('success', T('savedShort')); render(); } return; }
+    if(S.dirty){ S.saved = snap(); S.dirty = false; notify('success', T('savedShort'), MSG_MS_SAVE); render(); } return; }
   if(ev.key === 'Escape'){ if(S.modal){ S.modal = null; render(); } else if(S.pop){ S.pop = null; render(); } else if(S.sel){ S.sel = null; render(); } return; }
   if(typing) return;
   if(!S.sel) return;
@@ -1529,7 +1661,9 @@ document.addEventListener('keydown', ev => {
 });
 
 /* keep the "now" marker and Active-now pills honest */
-setInterval(() => { if(!S.drag && !S.pop && !S.modal) render(); }, 30000);
+setInterval(() => { if(!S.drag && !S.rs && !S.pop && !S.modal) render(); }, 30000);
+/* the footer clock is patched in place every second */
+setInterval(tickClock, 1000);
 
 render();
 </script>
