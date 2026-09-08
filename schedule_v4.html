@@ -1,0 +1,2311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time schedules v4 — Web Configurator (v3)</title>
+<style>
+/* ────────────────────────────────────────────────────────────────
+   Design tokens (subset of the Axxon One "one-*" token set)
+   ──────────────────────────────────────────────────────────────── */
+:root,[data-scheme=light]{
+  color-scheme:light;
+  --fg-default:#4b4c53; --fg-muted:#7b7c85; --fg-subtle:#9a9aa2; --fg-disabled:#a0aec0;
+  --bg-canvas:#f7f7f7; --bg-surface:#fff; --bg-muted:#f2f3f5; --bg-subtle:#e9ebf2; --bg-popup:#fff;
+  --border-default:#d6dae3; --border-strong:#a0aec0; --border-popup:#d6d6d6;
+  --control-bg:#e9ebf2; --control-hover:#f2f3f5; --control-selected:#e3e7ef;
+  --accent:#0070e4; --accent-hover:#0189ff; --accent-pressed:#0053a8; --accent-on:#fff; --accent-soft:#d9ecff;
+  --accent-half:#7fb5e8;
+  --status-info:#0070e4; --status-warning:#ff8a00; --status-success:#20d300; --danger:#e01b24;
+  --fb-info:#0070e41f; --fb-warning:#ff8a001f; --fb-success:#20d3001f; --fb-danger:#f0000f14;
+  --grid-line:#e2e5ec; --grid-line-strong:#c9ced9; --track-bg:#fbfbfc;
+  --scrim:#00000052; --shadow-popup:0 4px 12px #0000002e; --shadow-dialog:0 8px 28px #00000040;
+}
+[data-scheme=dark]{
+  color-scheme:dark;
+  --fg-default:#f6f6f6; --fg-muted:#b3b3b8; --fg-subtle:#858585; --fg-disabled:#858585;
+  --bg-canvas:#121212; --bg-surface:#191919; --bg-muted:#1f1f1f; --bg-subtle:#2a2a2a; --bg-popup:#2a2a2a;
+  --border-default:#333; --border-strong:#656565; --border-popup:#3d3d3d;
+  --control-bg:#3d3d3d; --control-hover:#484848; --control-selected:#4a4a4a;
+  --accent:#0070e4; --accent-hover:#0082f7; --accent-pressed:#0053a8; --accent-on:#fff; --accent-soft:#004184;
+  --accent-half:#12558f;
+  --status-info:#0070e4; --status-warning:#ff8a00; --status-success:#20d300; --danger:#ff5a5a;
+  --fb-info:#0070e433; --fb-warning:#ff8a0033; --fb-success:#20d30033; --fb-danger:#ff000033;
+  --grid-line:#2c2c2c; --grid-line-strong:#3d3d3d; --track-bg:#161616;
+  --scrim:#0009; --shadow-popup:0 4px 12px #0000006b; --shadow-dialog:0 8px 28px #000000a6;
+}
+:root{
+  --r-xs:2px; --r-ctl:4px; --r-box:6px; --r-win:8px; --r-pill:999px;
+  --fs-cap:9px; --fs-body:11px; --fs-ctl:12px; --fs-h3:14px; --fs-h2:16px;
+  --font:Inter,Roboto,"Segoe UI",system-ui,sans-serif;
+  --mono:"Roboto Mono",Consolas,ui-monospace,monospace;
+  --ruler-w:196px;      /* checkbox + day name + gutter */
+  --side-w:32px;        /* right gutter (kebab) */
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg-canvas);color:var(--fg-default);font-family:var(--font);font-size:var(--fs-ctl);-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+::selection{background:var(--accent-soft)}
+
+/* ── generic controls ─────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:28px;padding:0 10px;
+  border:1px solid transparent;border-radius:var(--r-ctl);background:var(--control-bg);color:var(--fg-default);
+  font-size:var(--fs-ctl);cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--control-hover)}
+.btn:active{transform:translateY(.5px)}
+.btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+.btn--primary{background:var(--accent);color:var(--accent-on)}
+.btn--primary:hover{background:var(--accent-hover)}
+.btn--outline{background:transparent;border-color:var(--border-strong)}
+.btn--outline:hover{background:var(--control-hover)}
+.btn--subtle{background:transparent}
+.btn--subtle:hover{background:var(--control-hover)}
+.btn--danger{background:transparent;border-color:var(--border-strong);color:var(--danger)}
+.btn--danger:hover{background:var(--fb-danger)}
+.btn--sm{height:24px;padding:0 8px;font-size:var(--fs-body)}
+.btn--icon{width:26px;padding:0;flex:none}
+.btn--on{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:var(--r-ctl);overflow:hidden;height:28px}
+.seg button{height:100%;padding:0 10px;border:0;background:transparent;color:var(--fg-muted);font-size:var(--fs-ctl);cursor:pointer}
+.seg button+button{border-left:1px solid var(--border-strong)}
+.seg button:hover{background:var(--control-hover)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-on)}
+.inp{height:28px;padding:0 8px;border:1px solid var(--border-strong);border-radius:var(--r-ctl);
+  background:var(--bg-surface);color:var(--fg-default);font-size:var(--fs-ctl);font-family:inherit;width:100%}
+.inp:focus{outline:none;border-color:var(--accent-hover);box-shadow:0 0 0 1px var(--accent-hover)}
+.inp--time{width:88px;font-variant-numeric:tabular-nums}
+.inp--sm{height:24px;font-size:var(--fs-body)}
+select.inp{cursor:pointer}
+.lbl{display:block;font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle);margin-bottom:3px}
+.pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 10px;border-radius:var(--r-pill);
+  background:var(--bg-subtle);font-size:var(--fs-body);font-weight:600;white-space:nowrap}
+.pill--live{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.pill--idle{background:transparent;border:1px solid var(--border-default);color:var(--fg-muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border:1px solid var(--border-default);
+  border-radius:var(--r-ctl);background:var(--bg-surface);font-size:var(--fs-body);white-space:nowrap}
+.tog{height:26px;padding:0 9px;border:1px solid var(--border-strong);border-radius:var(--r-ctl);
+  background:transparent;color:var(--fg-muted);font-size:var(--fs-body);cursor:pointer}
+.tog[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
+.muted{color:var(--fg-muted)}
+kbd{display:inline-block;min-width:16px;padding:0 4px;border:1px solid var(--border-strong);border-bottom-width:2px;
+  border-radius:3px;background:var(--bg-muted);font:inherit;font-size:var(--fs-cap);line-height:15px;text-align:center}
+.subtle{color:var(--fg-subtle)}
+.hint{font-size:var(--fs-body);color:var(--fg-muted);line-height:1.5}
+.row{display:flex;align-items:center;gap:8px}
+.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.sep{height:1px;background:var(--border-default);border:0;margin:0}
+
+/* ── shell ────────────────────────────────────────────────────── */
+.appbar{display:flex;align-items:center;gap:16px;height:44px;padding:0 16px;background:var(--bg-surface);
+  border-bottom:1px solid var(--border-default)}
+.appbar .brand{font-size:var(--fs-h3);font-weight:700;letter-spacing:-.01em}
+.tabs{display:flex;gap:2px;overflow:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{height:44px;padding:0 12px;border:0;background:transparent;color:var(--fg-muted);
+  font-size:var(--fs-ctl);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button:hover{color:var(--fg-default)}
+.tabs button[aria-current=page]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.langsel{height:28px;padding:0 24px 0 8px;border:1px solid var(--border-strong);border-radius:var(--r-ctl);
+  background:var(--bg-surface) no-repeat right 7px center;color:var(--fg-default);font-family:inherit;
+  font-size:var(--fs-ctl);cursor:pointer;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 12px) 12px,calc(100% - 8px) 12px;background-size:4px 4px,4px 4px}
+.langsel:focus{outline:none;border-color:var(--accent-hover);box-shadow:0 0 0 1px var(--accent-hover)}
+.shell{display:flex;align-items:stretch;height:calc(100vh - 44px);overflow:hidden}
+body[data-resizing]{cursor:col-resize}
+body[data-resizing] *{user-select:none!important}
+
+/* ── panel splitters ──────────────────────────────────────────── */
+.splitter{flex:none;width:7px;position:relative;cursor:col-resize;background:transparent;z-index:9}
+.splitter::before{content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:var(--border-default);
+  transition:background .12s,left .12s,width .12s}
+/* always-visible grip so the handle is discoverable, accent on hover/drag */
+.splitter::after{content:"";position:absolute;top:50%;left:2px;width:3px;height:28px;margin-top:-14px;
+  border-radius:2px;background:var(--border-strong);opacity:.5;transition:opacity .12s,background .12s}
+.splitter:hover::before,.splitter--drag::before,.splitter:focus-visible::before{left:2px;width:3px;background:var(--accent)}
+.splitter:hover::after,.splitter--drag::after,.splitter:focus-visible::after{opacity:1;background:var(--accent)}
+.splitter:focus-visible{outline:none}
+
+/* ── left: schedule list ─────────────────────────────────────── */
+.side{width:268px;flex:none;background:var(--bg-surface);
+  display:flex;flex-direction:column;min-height:0}
+.side__head{padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px}
+.side__title{font-size:var(--fs-h3);font-weight:600}
+.side__list{flex:1;overflow:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:3px}
+.sched{position:relative;padding:8px 26px 8px 10px;border:1px solid transparent;border-radius:var(--r-box);cursor:pointer}
+.sched:hover{background:var(--control-hover)}
+.sched[aria-selected=true]{background:var(--control-selected);border-color:var(--accent)}
+.sched__name{font-size:var(--fs-ctl);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sched__strip{display:flex;flex-direction:column;gap:2px;margin:7px 0 6px}
+.sched__strip i{height:3px;border-radius:1px;background-color:var(--bg-subtle)}
+.sched__meta{font-size:var(--fs-body);color:var(--fg-muted)}
+.sched__kebab{position:absolute;top:6px;right:4px;opacity:0}
+.sched:hover .sched__kebab,.sched[aria-selected=true] .sched__kebab{opacity:1}
+
+/* ── centre: editor ───────────────────────────────────────────── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto}
+.editor{padding:14px 18px 24px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box)}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;
+  background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box)}
+.tbsep{width:1px;align-self:stretch;background:var(--border-default);margin:0 2px}
+
+/* grid */
+.grid{border:1px solid var(--border-default);border-radius:var(--r-box);overflow:hidden;background:var(--bg-surface);user-select:none}
+.ruler{display:flex;background:var(--bg-muted);border-bottom:1px solid var(--border-default)}
+.ruler__pad{width:var(--ruler-w);flex:none;display:flex;align-items:center;padding-left:10px;
+  font-size:var(--fs-cap);letter-spacing:.05em;text-transform:uppercase;color:var(--fg-subtle)}
+.ruler__cells{flex:1;display:flex;min-width:0}
+.ruler__cells span{flex:1;text-align:center;font-size:var(--fs-cap);color:var(--fg-muted);
+  padding:4px 0;border-left:1px solid var(--grid-line);font-variant-numeric:tabular-nums}
+.ruler__end{width:var(--side-w);flex:none;border-left:1px solid var(--grid-line)}
+.drow{display:flex;align-items:stretch;border-top:1px solid var(--border-default)}
+.drow:first-of-type{border-top:0}
+.drow--dim{opacity:.42}
+.drow--today .dday{font-weight:700;color:var(--fg-default)}
+.drow--focus .dchk{box-shadow:inset 3px 0 0 var(--accent)}
+.drow--focus .dday,.drow--focus .dsum{color:var(--accent);background:var(--fb-info)}
+.drow--focus .dchk{background:var(--fb-info)}
+.dchk{width:30px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg-muted);
+  border-right:1px solid var(--grid-line)}
+.dday{width:98px;flex:none;display:flex;align-items:center;padding-left:10px;font-size:var(--fs-ctl);
+  color:var(--fg-muted);background:var(--bg-muted);cursor:pointer}
+.dsum{width:68px;flex:none;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;
+  font-size:var(--fs-body);color:var(--fg-muted);background:var(--bg-muted);border-right:1px solid var(--grid-line);
+  font-variant-numeric:tabular-nums}
+.track{flex:1;min-width:0;height:38px;position:relative;background:var(--track-bg);cursor:crosshair;
+  background-image:repeating-linear-gradient(to right,var(--grid-line) 0,var(--grid-line) 1px,transparent 1px,transparent calc(100%/24))}
+.track--erase{cursor:cell}
+.dmenu{width:var(--side-w);flex:none;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--grid-line)}
+.blk{position:absolute;top:4px;bottom:4px;border-radius:var(--r-ctl);background:var(--accent);color:var(--accent-on);
+  display:flex;align-items:center;justify-content:center;font-size:var(--fs-body);font-variant-numeric:tabular-nums;
+  overflow:hidden;white-space:nowrap;cursor:grab;box-shadow:inset 0 0 0 1px #ffffff26}
+.blk--sel{box-shadow:0 0 0 2px var(--bg-surface),0 0 0 4px var(--fg-default);z-index:6}
+.blk--cyc{background:repeating-linear-gradient(115deg,var(--accent) 0 7px,var(--accent-pressed) 7px 12px)}
+.blk--cont{background:repeating-linear-gradient(45deg,var(--accent) 0 6px,color-mix(in srgb,var(--accent) 55%,transparent) 6px 12px);
+  cursor:pointer;opacity:.85}
+.blk__h{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
+.blk__h--l{left:0} .blk__h--r{right:0}
+.ghost{position:absolute;top:4px;bottom:4px;border-radius:var(--r-ctl);background:var(--accent-soft);
+  border:1px dashed var(--accent);z-index:7;pointer-events:none;display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-body);color:var(--accent);font-variant-numeric:tabular-nums}
+.ghost--erase{background:var(--fb-danger);border-color:var(--danger);color:var(--danger)}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--status-warning);z-index:8;pointer-events:none}
+.nowline::before{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--status-warning)}
+
+/* selection bar */
+.selbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;background:var(--bg-subtle);
+  border-radius:var(--r-box);border:1px solid transparent}
+.selbar--multi{border-color:var(--accent)}
+
+/* accordions */
+.acc{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box);overflow:hidden}
+.acc+.acc{margin-top:8px}
+.acc__sum{display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 12px;border:0;background:transparent;
+  color:var(--fg-default);font-size:var(--fs-ctl);font-weight:600;cursor:pointer;text-align:left}
+.acc__sum:hover{background:var(--control-hover)}
+.acc__sum .caret{transition:transform .12s;flex:none;color:var(--fg-muted)}
+.acc[data-open=true] .caret{transform:rotate(90deg)}
+.acc__body{padding:4px 12px 14px;border-top:1px solid var(--border-default)}
+.acc[data-open=false] .acc__body{display:none}
+.grpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:10px}
+.grp{border:1px solid var(--border-default);border-radius:var(--r-box);padding:9px 10px}
+.grp h4{margin:0 0 6px;font-size:var(--fs-body);text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle);font-weight:600}
+table.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-body)}
+table.tbl th{text-align:left;font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.04em;
+  color:var(--fg-subtle);font-weight:600;padding:4px 6px}
+table.tbl td{padding:3px 6px;border-top:1px solid var(--grid-line);vertical-align:middle}
+pre.json{margin:0;max-height:230px;overflow:auto;background:var(--bg-muted);border:1px solid var(--border-default);
+  border-radius:var(--r-ctl);padding:10px;font-family:var(--mono);font-size:var(--fs-body);line-height:1.55}
+
+/* ── right: day inspector ─────────────────────────────────────── */
+.insp{width:306px;flex:none;background:var(--bg-surface);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.insp__scroll{flex:1;min-height:0;overflow:auto}
+.insp__head{padding:13px 14px 10px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--border-default)}
+.insp__title{font-size:var(--fs-h3);font-weight:600}
+.insp__sec{padding:11px 14px;border-bottom:1px solid var(--border-default);display:flex;flex-direction:column;gap:8px}
+.ivrow{display:flex;align-items:center;gap:6px}
+.ivrow__dur{width:62px;flex:none;text-align:right;font-size:var(--fs-body);color:var(--fg-muted);font-variant-numeric:tabular-nums}
+.daychips{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.daychk{display:flex;align-items:center;gap:6px;font-size:var(--fs-body);cursor:pointer}
+
+/* ── status bar (bottom of the inspector) ─────────────────────── */
+.statusbar{flex:none;padding:8px 14px 10px;background:var(--bg-muted);
+  border-top:1px solid var(--border-default);display:flex;flex-direction:column;gap:6px}
+/* Both notices share one font — only the colour tells them apart. */
+.statusbar__msg{min-height:15px;font-size:var(--fs-body);font-weight:600;line-height:1.35;color:transparent}
+.statusbar__msg[data-kind=warning]{color:var(--status-warning)}
+.statusbar__msg[data-kind=success]{color:var(--status-success)}
+.statusbar__msg[data-kind=info]{color:var(--status-info)}
+.statusbar__msg[data-kind=danger]{color:var(--danger)}
+.statusbar__clock{display:flex;align-items:baseline;gap:8px;border-top:1px solid var(--border-default);padding-top:7px}
+.statusbar__day{flex:1;min-width:0;font-size:var(--fs-body);color:var(--fg-muted);line-height:1.35}
+.statusbar__time{flex:none;font-size:var(--fs-h2);font-weight:600;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums;color:var(--fg-default)}
+
+/* ── overlays ─────────────────────────────────────────────────── */
+.pop{position:fixed;z-index:60;background:var(--bg-popup);border:1px solid var(--border-popup);
+  border-radius:var(--r-box);box-shadow:var(--shadow-popup);padding:6px;min-width:184px}
+.pop__item{display:flex;align-items:center;gap:8px;width:100%;height:26px;padding:0 8px;border:0;background:transparent;
+  color:var(--fg-default);font-size:var(--fs-ctl);text-align:left;cursor:pointer;border-radius:var(--r-ctl)}
+.pop__item:hover{background:var(--control-hover)}
+.pop__item--danger{color:var(--danger)}
+.pop__cap{padding:5px 8px 3px;font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.04em;color:var(--fg-subtle)}
+.pop__bar{width:46px;height:8px;border-radius:2px;flex:none;background-color:var(--bg-subtle)}
+.scrim{position:fixed;inset:0;z-index:55}
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:var(--scrim)}
+.modal__box{width:392px;max-width:calc(100vw - 32px);background:var(--bg-popup);border-radius:var(--r-win);
+  box-shadow:var(--shadow-dialog);overflow:hidden}
+.modal__t{padding:14px 16px 0;font-size:var(--fs-h3);font-weight:600}
+.modal__c{padding:8px 16px 16px;font-size:var(--fs-ctl);color:var(--fg-muted);line-height:1.55}
+.modal__a{display:flex;justify-content:flex-end;gap:8px;padding:0 16px 16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── v4: pattern bar (week / cycle / crews) ───────────────────── */
+.patbar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px;padding:8px 10px;
+  background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--r-box)}
+.patfld{display:flex;flex-direction:column;gap:3px}
+.patfld .lbl{margin:0}
+.kindtag{display:inline-block;margin-left:5px;padding:0 5px;border-radius:var(--r-pill);
+  background:var(--accent-soft);color:var(--accent);font-size:var(--fs-cap);font-weight:600;vertical-align:1px}
+
+/* two-line row header (label + next occurrence) */
+.dday{flex-direction:column;align-items:flex-start;justify-content:center;gap:1px}
+.dday__n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dday__d{font-size:var(--fs-cap);color:var(--fg-subtle);font-weight:400}
+.grid__rows{max-height:none}
+.grid--tall .grid__rows{max-height:432px;overflow-y:auto}
+
+/* ── v4: calendar check ───────────────────────────────────────── */
+.cal{display:flex;flex-direction:column;gap:7px}
+.cal__head{display:flex;align-items:center;gap:6px}
+.cal__dow,.cal__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal__dow span{font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.05em;
+  color:var(--fg-subtle);text-align:center;font-weight:600}
+.cal__cell{min-height:56px;padding:4px 5px 3px;border:1px solid var(--border-default);border-radius:var(--r-ctl);
+  background:var(--bg-surface);cursor:pointer;display:flex;flex-direction:column;gap:3px;text-align:left}
+.cal__cell:hover{border-color:var(--border-strong)}
+.cal__cell--pad{border:0;background:transparent;cursor:default;min-height:0}
+.cal__cell--exception{background:var(--fb-warning);border-color:var(--status-warning)}
+.cal__cell--holiday{background:var(--fb-danger);border-color:var(--danger)}
+.cal__cell--outside{background:var(--bg-muted);opacity:.6}
+.cal__cell--today{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal__cell--sel{border-color:var(--accent);background:var(--fb-info)}
+.cal__top{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.cal__n{font-size:var(--fs-ctl);font-weight:600}
+.cal__b{font-size:var(--fs-cap);font-weight:700;color:var(--fg-muted)}
+.cal__strip{height:7px;border-radius:var(--r-xs);background-color:var(--track-bg);
+  border:1px solid var(--grid-line);background-repeat:no-repeat}
+.cal__h{font-size:var(--fs-cap);color:var(--fg-muted);text-align:right;min-height:11px}
+.cal__sel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;
+  border:1px solid var(--accent);border-radius:var(--r-box);background:var(--fb-info)}
+.cal__legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.lg{width:12px;height:12px;border-radius:var(--r-xs);border:1px solid var(--border-default);display:inline-block}
+.lg--base{background:var(--bg-surface)}
+.lg--exception{background:var(--fb-warning);border-color:var(--status-warning)}
+.lg--holiday{background:var(--fb-danger);border-color:var(--danger)}
+.lg--outside{background:var(--bg-muted)}
+
+/* ── v4: exception cards ──────────────────────────────────────── */
+.exc{border:1px solid var(--border-default);border-radius:var(--r-box);
+  background:var(--bg-surface);padding:8px 9px;margin-bottom:7px}
+.exc--warn{border-color:var(--status-warning);background:var(--fb-warning)}
+.exc__hd{display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px}
+.exc__bd{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-top:8px;
+  padding-top:8px;border-top:1px dashed var(--border-default)}
+.exc__warn{align-self:center;color:var(--status-warning);font-size:var(--fs-h3);cursor:help}
+.exdow{display:flex;flex-direction:column;gap:3px}
+.exiv{display:flex;flex-direction:column;gap:3px}
+.exiv__row{display:inline-flex;align-items:center;gap:3px;padding:2px 3px;
+  border:1px solid var(--border-default);border-radius:var(--r-ctl);background:var(--bg-muted)}
+
+/* ── v4: misc ─────────────────────────────────────────────────── */
+.ivrow{gap:4px}
+.ivrow__dur{width:48px}
+.rowchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:4px}
+.pop--tall{max-height:min(460px,70vh);overflow-y:auto}
+</style>
+</head>
+<body data-scheme="light">
+
+<div class="appbar" id="appbar"></div>
+<div class="shell" id="shell"></div>
+<div id="overlays"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Time schedules — prototype v4
+
+   What changed against v3 (see Efficiency_Analysis.MD):
+
+   • Pattern is no longer a fixed 7-day week. `pattern.kind` is either
+     'week' (7 named rows) or 'cycle' (N rows anchored to a date), which
+     is what makes 2/2, 3/3, 4/4, вахта and A/B weeks expressible at all.
+   • Crews: a cycle can be shared by several crews with a day offset.
+   • One resolver — `effectiveOn(schedule, date)` — decides what a given
+     calendar date actually looks like: validity period → exception →
+     holiday list → base pattern row. Everything else (calendar, hour
+     totals, "active now", API payload) is derived from it, so declared
+     settings can no longer silently do nothing.
+   • Month calendar makes the resolved result verifiable by eye.
+   • Exceptions: many intervals per date, weekday filter inside a range,
+     chronological order, overlap warnings, duplication, bulk clear,
+     "as in another schedule" mode.
+   • Holiday list is a real editable list with a per-schedule rule.
+   • Touching intervals are no longer merged (shift boundaries survive);
+     only true overlaps merge, and that is reported.
+   • Carry-over past midnight is capped at 24 h per calendar day.
+   ═══════════════════════════════════════════════════════════════ */
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_ISO  = {Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7};
+const DAY_MIN  = 1440;
+const MAX_CYCLE = 31;
+let uid = 1; const nid = p => (p||'i') + (uid++);
+
+/* ══ i18n ═══════════════════════════════════════════════════════ */
+const LANGS = [
+  { id:'en', label:'English', locale:'en-US' },
+  { id:'ru', label:'Русский', locale:'ru-RU' }
+];
+/** Russian plural picker: 1 день / 2 дня / 5 дней. */
+const pl = (n, one, few, many) => {
+  const a = n % 10, b = n % 100;
+  return a === 1 && b !== 11 ? one : (a >= 2 && a <= 4 && (b < 10 || b >= 20) ? few : many);
+};
+const I18N = {
+en: {
+  brand:'Web Configurator', navAria:'Configurator sections',
+  navDevices:'Devices', navGroups:'Groups', navDetectors:'Detectors', navArchives:'Archives',
+  navRoles:'Roles & users', navSchedules:'Time schedules', navMacros:'Macros', navAudit:'Audit log', navSettings:'Settings',
+  langAria:'Interface language', fmtAria:'Time format', h24:'24 h', h12:'12 h',
+  themeTitle:'Toggle light / dark theme', themeAria:'Toggle theme',
+  day_Mon:'Monday', day_Tue:'Tuesday', day_Wed:'Wednesday', day_Thu:'Thursday', day_Fri:'Friday', day_Sat:'Saturday', day_Sun:'Sunday',
+  ds_Mon:'Mon', ds_Tue:'Tue', ds_Wed:'Wed', ds_Thu:'Thu', ds_Fri:'Fri', ds_Sat:'Sat', ds_Sun:'Sun',
+  da_Mon:'Monday', da_Tue:'Tuesday', da_Wed:'Wednesday', da_Thu:'Thursday', da_Fri:'Friday', da_Sat:'Saturday', da_Sun:'Sunday',
+  dIn_Mon:'on Monday', dIn_Tue:'on Tuesday', dIn_Wed:'on Wednesday', dIn_Thu:'on Thursday',
+  dIn_Fri:'on Friday', dIn_Sat:'on Saturday', dIn_Sun:'on Sunday',
+  dFrom_Mon:'from Monday', dFrom_Tue:'from Tuesday', dFrom_Wed:'from Wednesday', dFrom_Thu:'from Thursday',
+  dFrom_Fri:'from Friday', dFrom_Sat:'from Saturday', dFrom_Sun:'from Sunday',
+  unitH:'h', unitMin:'min', zeroMin:'0 min', hour1:'1 h', unitDays:'d',
+  /* sidebar */
+  sideTitle:'Time schedules',
+  sideNote:'Reusable activity patterns — <b>not</b> UTC offsets. A pattern is either a week or a cycle of any length.',
+  searchPh:'Search schedules', schedulesAria:'Schedules', newSchedule:'＋ New schedule',
+  noMatches:'No schedules match the search.', activeRightNow:'Active right now',
+  perWeek:p => `${p.d} / week`, perCycle:p => `${p.d} / ${p.n}-day cycle`,
+  usesN:p => `${p.n} use${p.n === 1 ? '' : 's'}`,
+  schedActionsAria:'Schedule actions', importJson:'Import JSON', exportJson:'Export JSON',
+  /* header */
+  nameAria:'Schedule name', coverageTitle:'Pattern coverage — exceptions are shown in the calendar below',
+  coverage:p => `${p.d} / week · ${p.pct}%`,
+  coverageCycle:p => `${p.d} / ${p.n} d · ${p.pct}% · ≈${p.wk} / week`,
+  activeNow:'● Active now', inactiveNow:'○ Inactive now', unsaved:'Unsaved changes',
+  btnDelete:'Delete', btnCancel:'Cancel', btnSave:'Save',
+  /* pattern bar */
+  patKindAria:'Pattern type', patWeek:'Week', patCycle:'Cycle',
+  cycleLen:'Cycle length', cycleAnchor:'Cycle starts', cycleAnchorTitle:'Day 1 of the cycle falls on this date',
+  crews:'Crews', crewsTitle:'How many crews share this cycle', crewStep:'Offset',
+  crewStepTitle:'Days between crews inside the cycle', crewShow:'Show crew',
+  crewN:p => `Crew ${p.n}`, cycleDay:p => `Day ${p.n}`,
+  weekHint:'A week repeats every 7 days and is aligned to weekdays.',
+  cycleHint:p => `The pattern repeats every ${p.n} day${p.n === 1 ? '' : 's'} from the anchor date, independently of weekdays.`,
+  /* toolbar */
+  toolAria:'Editing tool', draw:'✎ Draw', erase:'⌫ Erase',
+  undoTitle:'Undo (Ctrl+Z)', redoTitle:'Redo (Ctrl+Shift+Z)',
+  snap:'Snap', snapAria:'Snap step', templates:'Templates ▾',
+  invert:'Invert', invertTitle:'Swap active and inactive time',
+  clearAllBtn:'Clear pattern', clearCheckedBtn:'Clear checked rows',
+  scopeHint:p => `Templates, Invert and Clear apply to the <b>${p.n} checked row${p.n === 1 ? '' : 's'}</b>`,
+  scopeHintNone:'Check row boxes to scope bulk actions',
+  /* grid */
+  rulerPad:'Row / total', selectRowAria:p => `Select ${p.row} for bulk editing`,
+  today:'TODAY', coveredTitle:'Time covered by this row',
+  timelineAria:p => `${p.row} timeline`, rowActionsAria:p => `${p.row} actions`, nowTitle:p => `Now ${p.t}`,
+  nextOn:p => `next ${p.d}`,
+  gridHint:p => `Drag on empty track to paint an interval · drag a block to move it · drag its edges to resize (snaps to ${p.step}) · double-click a block to open it · <kbd>Del</kbd> removes the selected block · <kbd>←</kbd>/<kbd>→</kbd> nudge it.`,
+  cycTitle:p => ` · ${p.on} min every ${p.every} min`, cycBlk:p => ` ↻ ${p.on}/${p.every} min`,
+  continuesFrom:p => ` (continues from ${p.row})`,
+  /* selection bar */
+  rowsChecked:p => `${p.n} row${p.n === 1 ? '' : 's'} checked`,
+  scopeNote:p => `${p.list} — bulk actions target these rows only`,
+  copyFromRow:'Copy from row…', clearChecked:'Clear checked', uncheckAll:'Uncheck all',
+  selHint:'Select a block on the grid, or edit the focused row in the panel on the right.',
+  from:'From', to:'To', duration:'Duration', crossesMidnight:' · crosses midnight',
+  cyclic:'Cyclic', cycOnLbl:'on', cycEveryLbl:'min every', minSuffix:'min',
+  copyIntervalTo:'Copy interval to…', deleteInterval:'Delete interval',
+  /* used in */
+  usedIn:'Used in', placesN:p => `${p.n} place${p.n === 1 ? '' : 's'}`,
+  grpArchive:'Archive recording', grpRoles:'Roles & permissions', grpMacros:'Macros',
+  grpExport:'Video export', grpRepl:'Replication', notUsed:'Not used',
+  usedInNote:'Deleting or narrowing a schedule affects every object listed here. The configurator warns you before deleting and lists the impacted objects.',
+  /* calendar */
+  calTitle:'Calendar check', calMeta:p => `${p.month} · ${p.d}`,
+  prevMonth:'Previous month', nextMonth:'Next month', thisMonth:'Today',
+  monthTotal:p => `${p.d} in this month`,
+  calNote:'This is the resolved result: validity period, exceptions and the holiday list are applied on top of the pattern. Click a day to inspect or override it.',
+  legend:'Legend', legendBase:'pattern', legendExc:'exception', legendHol:'holiday', legendOut:'outside validity',
+  calRuleBase:p => `pattern row “${p.row}”`, calRuleExc:p => `exception${p.note ? ' — ' + p.note : ''}`,
+  calRuleHol:'holiday list', calRuleOut:'outside the validity period',
+  calSelected:p => `${p.date}: ${p.rule} · ${p.d}`,
+  calAddExc:'Add an exception for this date', calGoRow:'Open the pattern row',
+  /* exceptions */
+  excTitle:'Exceptions, holidays & overrides',
+  rulesN:p => `${p.n} rule${p.n === 1 ? '' : 's'}`, plusHolidayList:' + holiday list',
+  excMode_none:'Non-working (no intervals)', excMode_full:'Active 24 hours',
+  excMode_sameAs:'Same as pattern row…', excMode_custom:'Custom intervals',
+  excMode_sched:'Same as another schedule…',
+  sameAsRowLbl:'Source row', sameAsSchedLbl:'Source schedule',
+  excNote:'Exception dates override the pattern — holidays, shortened pre-holiday days, planned maintenance. When ranges overlap, the narrower one wins; overlaps are flagged.',
+  excFrom:'From', excTo:'To', excDows:'Only on', excDowsAll:'every day of the range',
+  excModeLbl:'Behaviour', yearly:'yearly', commentPh:'Comment',
+  removeExc:'Remove exception', dupExc:'Duplicate exception',
+  noExc:'No exception dates yet.', addException:'＋ Add exception', clearAllExc:'Clear all',
+  overlapWarn:p => `Overlaps ${p.n} other rule${p.n === 1 ? '' : 's'} — the narrower range wins`,
+  excIntervals:'Intervals on these dates', addExcIv:'＋ interval', delExcIv:'Remove interval',
+  holTitle:'Server-wide holiday list', holApply:'Apply to this schedule',
+  holMode:'On holidays', holAdd:'＋ Add date', holRemove:'Remove date',
+  holNote:'The year is ignored — every date in the list repeats annually. The list is shared by all schedules; the rule above is per schedule.',
+  holEmpty:'The list is empty.',
+  /* advanced */
+  advTitle:'Validity & reference time', configured:'configured', defaults:'defaults',
+  validityPeriod:'Validity period', validFrom:'Valid from', validTo:'Valid to',
+  validityNote:'Empty = always valid. Outside the period the schedule resolves to “no intervals”, which the calendar shows in grey.',
+  referenceTime:'Reference time',
+  referenceNote:'Times are stored as offsets inside the pattern and evaluated in the <b>server’s local time</b>, so a DST change shifts the wall-clock window, not the offset. Add an exception date if a specific transition day must be handled differently.',
+  audit:'Audit', lastModified:'Last modified', identifier:'Identifier', justNowYou:'just now · you',
+  /* api */
+  apiTitle:'API payload preview', intervalsN:p => `${p.n} interval${p.n === 1 ? '' : 's'}`,
+  apiNote:'Read-only preview of the request the editor would send on Save. Unlike v3 it carries the whole schedule: pattern type and anchor, crew offsets, validity period, holiday rule and every exception.',
+  /* inspector */
+  inspMeta:p => `${p.n} interval${p.n === 1 ? '' : 's'} defined · ${p.own} owned · <b>${p.cov}</b> covered`,
+  plusCarryOver:p => `↳ plus carry-over from ${p.row}`,
+  quickFill:'Quick fill', allDay:'All day', invertDay:'Invert row', clear:'Clear',
+  intervals:'Intervals', noIntervals:'No intervals — this row is inactive all day.',
+  addInterval:'＋ Add interval', startAria:'Start', endAria:'End',
+  cycOnTitle:p => `Cyclic: ${p.on} min every ${p.every} min — click to make continuous`,
+  cycOffTitle:'Make cyclic', delIntervalAria:'Delete interval',
+  continuesTo:p => `↳ continues to ${p.t} in ${p.row}`,
+  copyRowTo:p => `Copy ${p.row} to`, selectAll:'Select all', monFri:'Mon–Fri',
+  merge:'Merge', replace:'Replace',
+  copyModeNote:'<b>Replace</b> overwrites the target rows, <b>Merge</b> adds these intervals to what is already there.',
+  /* status bar */
+  statusAria:'Editor status', clockTitle:'Server local time — schedules are evaluated against it',
+  resizeSideAria:'Resize the schedule list', resizeInspAria:'Resize the row inspector',
+  resizeTitle:'Drag to resize · double-click to reset · ←/→ when focused',
+  /* popovers */
+  applyTemplate:'Apply template', tplWeekCap:'Weekly patterns', tplCycleCap:'Shift cycles',
+  fill24:'Fill 24 hours', openInInspector:'Open in inspector', clearRow:'Clear row',
+  duplicate:'Duplicate', exportThis:'Export this schedule', deleteEllipsis:'Delete…',
+  copyFrom:'Copy from', copyThisIntervalTo:'Copy this interval to', allOtherRows:'All other rows',
+  /* dialogs & messages */
+  lastScheduleWarn:'At least one schedule must remain.',
+  delSchedTitle:'Delete schedule?',
+  delSchedRefs:p => `“${p.name}” is referenced in <b>${p.n} place${p.n === 1 ? '' : 's'}</b> (roles, macros, archive recording, export, replication). Those objects will fall back to <i>Never</i> until you assign another schedule.`,
+  delSchedNoRefs:p => `“${p.name}” is not referenced anywhere. This cannot be undone.`,
+  deletedRefs:p => `“${p.name}” deleted — ${p.n} object${p.n === 1 ? '' : 's'} left without a schedule.`,
+  deleted:p => `“${p.name}” deleted.`,
+  applyTplTitle:'Apply template?',
+  applyTplScoped:p => `Replace the contents of the <b>${p.n} checked row${p.n === 1 ? '' : 's'}</b> with “${p.tpl}”?`,
+  applyTplWhole:p => `Replace the <b>whole pattern</b> of “${p.name}” with “${p.tpl}”?`,
+  applyTplKind:p => `“${p.tpl}” is a ${p.n}-day cycle. Applying it switches “${p.name}” from a week to a ${p.n}-day cycle.`,
+  btnApply:'Apply',
+  clearTitle:'Clear intervals?',
+  clearScoped:p => `Clear the ${p.n} checked row${p.n === 1 ? '' : 's'}?`,
+  clearWhole:'Clear the entire pattern?', btnClear:'Clear',
+  rowCopied:p => `${p.row} copied to ${p.n} row${p.n === 1 ? '' : 's'}.`,
+  ivCopied:p => `Interval copied to ${p.n} row${p.n === 1 ? '' : 's'}.`,
+  mergedWarn:p => `${p.n} overlapping interval${p.n === 1 ? '' : 's'} merged. Touching intervals are kept separate.`,
+  savedToast:'Schedule saved. Assigned objects pick up the new pattern immediately.',
+  savedShort:'Schedule saved.',
+  discardTitle:'Discard changes?', discardMsg:'All edits made since the last save will be lost.',
+  btnDiscard:'Discard', discardedToast:'Changes discarded.',
+  switchTitle:'Discard unsaved changes?',
+  switchMsg:'The current schedule has unsaved changes. Switching will keep them in the editor — save or cancel first to be safe.',
+  btnSwitch:'Switch anyway',
+  kindTitle:'Change pattern type?',
+  kindToCycle:p => `Convert the week of “${p.name}” into a ${p.n}-day cycle? The first ${p.n} rows are kept, the rest is dropped.`,
+  kindToWeek:p => `Convert the cycle of “${p.name}” back into a 7-day week? The first 7 rows are kept and re-labelled Monday…Sunday.`,
+  btnConvert:'Convert',
+  clearExcTitle:'Clear all exceptions?',
+  clearExcMsg:p => `All ${p.n} exception rule${p.n === 1 ? '' : 's'} of this schedule will be removed. The holiday list is not affected.`,
+  exportToast:'Export prepared — the configurator downloads the schedule set as a JSON file.',
+  importToast:'Import opens a file picker and validates the JSON against the interval schema.',
+  checkTargetWarn:'Check at least one target row first.',
+  cycleLenWarn:p => `Cycle length must be between 2 and ${p.max} days.`,
+  newScheduleName:'New schedule', copySuffix:'(copy)',
+  /* templates */
+  tpl_biz:'Business hours',        tplN_biz:'Mon–Fri 09:00–18:00',
+  tpl_ext:'Extended office',       tplN_ext:'Mon–Fri 07:00–21:00',
+  tpl_shift2:'Two shifts',         tplN_shift2:'Mon–Fri 06:00–14:00 + 14:00–22:00',
+  tpl_night:'Nights',              tplN_night:'Daily 22:00–06:00 (+1 d)',
+  tpl_nonwork:'Non-working hours', tplN_nonwork:'Mon–Fri 18:00–09:00 + weekends',
+  tpl_wknd:'Weekends',             tplN_wknd:'Sat–Sun all day',
+  tpl_always:'24 / 7',             tplN_always:'Every day, all day',
+  tpl_motion:'Cyclic sampling',    tplN_motion:'Daily 5 min every 30 min',
+  tpl_c22d:'2/2 day shift',        tplN_c22d:'4-day cycle · 08:00–20:00',
+  tpl_c22n:'2/2 night shift',      tplN_c22n:'4-day cycle · 20:00–08:00 (+1 d)',
+  tpl_c33:'3/3',                   tplN_c33:'6-day cycle · 08:00–20:00',
+  tpl_c44:'4/4',                   tplN_c44:'8-day cycle · 08:00–20:00',
+  tpl_c41:'4/1 rolling days off',  tplN_c41:'5-day cycle · 09:00–18:00',
+  tpl_vahta:'Rotation 15/15',      tplN_vahta:'30-day cycle · 07:00–19:00',
+  tpl_ab:'Week A / week B',        tplN_ab:'14-day cycle · 09:00–18:00 then 14:00–23:00',
+  /* demo content */
+  sc_biz:'Business hours', sc_night:'Night shift', sc_wknd:'Weekend patrol',
+  sc_server:'Server room 24/7', sc_cyc:'Archive sampling (cyclic)', sc_shift:'Guard crews 2/2',
+  u_opDay:'Operators — day shift', u_front:'Front desk', u_guardNight:'Security guards — night',
+  u_wkndTeam:'Weekend patrol team', u_crewAB:'Guard crews A–D',
+  u_armPerim:'Arm perimeter outside hours', u_lockDoors:'Lock all doors after hours',
+  u_smsBreach:'SMS alert on breach', u_patrolRem:'Enable patrol reminders',
+  u_restartRec:'Restart recording service nightly',
+  u_lobby1:'Lobby cam 1 — constant recording', u_lobby2:'Lobby cam 2 — constant recording',
+  u_perim38:'Perimeter cam 3–8', u_serverCam:'Server room cam', u_parkSampling:'Parking lot cam — sampling',
+  u_gateCam:'Main gate cam', u_lobbyExp:'Daily lobby export', u_wkndExp:'Weekend incident export',
+  u_serverExp:'Server room continuous export', u_dr1:'Backup site DR-1', u_mirror4:'Offsite mirror — Rack 4',
+  ex_nye:'New Year’s Eve', ex_nyHol:'New Year holidays', ex_preHol:'Shortened pre-holiday day',
+  ex_maint:'Planned maintenance'
+},
+ru: {
+  brand:'Веб-конфигуратор', navAria:'Разделы конфигуратора',
+  navDevices:'Устройства', navGroups:'Группы', navDetectors:'Детекторы', navArchives:'Архивы',
+  navRoles:'Роли и пользователи', navSchedules:'Временные расписания', navMacros:'Макрокоманды',
+  navAudit:'Системный журнал', navSettings:'Настройки',
+  langAria:'Язык интерфейса', fmtAria:'Формат времени', h24:'24 ч', h12:'12 ч',
+  themeTitle:'Переключить светлую / тёмную тему', themeAria:'Переключить тему',
+  day_Mon:'Понедельник', day_Tue:'Вторник', day_Wed:'Среда', day_Thu:'Четверг',
+  day_Fri:'Пятница', day_Sat:'Суббота', day_Sun:'Воскресенье',
+  ds_Mon:'Пн', ds_Tue:'Вт', ds_Wed:'Ср', ds_Thu:'Чт', ds_Fri:'Пт', ds_Sat:'Сб', ds_Sun:'Вс',
+  da_Mon:'понедельник', da_Tue:'вторник', da_Wed:'среду', da_Thu:'четверг',
+  da_Fri:'пятницу', da_Sat:'субботу', da_Sun:'воскресенье',
+  dIn_Mon:'в понедельник', dIn_Tue:'во вторник', dIn_Wed:'в среду', dIn_Thu:'в четверг',
+  dIn_Fri:'в пятницу', dIn_Sat:'в субботу', dIn_Sun:'в воскресенье',
+  dFrom_Mon:'с понедельника', dFrom_Tue:'со вторника', dFrom_Wed:'со среды', dFrom_Thu:'с четверга',
+  dFrom_Fri:'с пятницы', dFrom_Sat:'с субботы', dFrom_Sun:'с воскресенья',
+  unitH:'ч', unitMin:'мин', zeroMin:'0 мин', hour1:'1 ч', unitDays:'дн',
+  sideTitle:'Временные расписания',
+  sideNote:'Многократно используемые шаблоны активности — это <b>не</b> смещения UTC. Шаблон — это либо неделя, либо цикл произвольной длины.',
+  searchPh:'Поиск расписания', schedulesAria:'Расписания', newSchedule:'＋ Новое расписание',
+  noMatches:'Ничего не найдено.', activeRightNow:'Активно сейчас',
+  perWeek:p => `${p.d} в неделю`, perCycle:p => `${p.d} за цикл ${p.n} дн`,
+  usesN:p => `${p.n} ${pl(p.n,'использование','использования','использований')}`,
+  schedActionsAria:'Действия с расписанием', importJson:'Импорт JSON', exportJson:'Экспорт JSON',
+  nameAria:'Название расписания', coverageTitle:'Покрытие по шаблону — исключения показаны в календаре ниже',
+  coverage:p => `${p.d} в неделю · ${p.pct}%`,
+  coverageCycle:p => `${p.d} за ${p.n} дн · ${p.pct}% · ≈${p.wk} в неделю`,
+  activeNow:'● Активно сейчас', inactiveNow:'○ Неактивно сейчас', unsaved:'Есть несохранённые изменения',
+  btnDelete:'Удалить', btnCancel:'Отмена', btnSave:'Сохранить',
+  patKindAria:'Тип шаблона', patWeek:'Неделя', patCycle:'Цикл',
+  cycleLen:'Длина цикла', cycleAnchor:'Начало цикла', cycleAnchorTitle:'На эту дату приходится день 1 цикла',
+  crews:'Бригад', crewsTitle:'Сколько бригад работает по этому циклу', crewStep:'Сдвиг',
+  crewStepTitle:'Сдвиг между бригадами внутри цикла, в днях', crewShow:'Показать бригаду',
+  crewN:p => `Бригада ${p.n}`, cycleDay:p => `День ${p.n}`,
+  weekHint:'Неделя повторяется каждые 7 суток и привязана к дням недели.',
+  cycleHint:p => `Шаблон повторяется каждые ${p.n} ${pl(p.n,'сутки','суток','суток')} от даты начала цикла, независимо от дней недели.`,
+  toolAria:'Инструмент редактирования', draw:'✎ Рисовать', erase:'⌫ Стирать',
+  undoTitle:'Отменить (Ctrl+Z)', redoTitle:'Повторить (Ctrl+Shift+Z)',
+  snap:'Шаг', snapAria:'Шаг привязки', templates:'Шаблоны ▾',
+  invert:'Инвертировать', invertTitle:'Поменять активное и неактивное время',
+  clearAllBtn:'Очистить шаблон', clearCheckedBtn:'Очистить отмеченные',
+  scopeHint:p => `Шаблоны, инверсия и очистка применяются к <b>${p.n} ${pl(p.n,'отмеченной строке','отмеченным строкам','отмеченным строкам')}</b>`,
+  scopeHintNone:'Отметьте строки флажками, чтобы ограничить массовые операции',
+  rulerPad:'Строка / итог', selectRowAria:p => `Отметить «${p.row}» для массового редактирования`,
+  today:'СЕГОДНЯ', coveredTitle:'Время, покрытое этой строкой',
+  timelineAria:p => `Шкала: ${p.row}`, rowActionsAria:p => `Действия: ${p.row}`, nowTitle:p => `Сейчас ${p.t}`,
+  nextOn:p => `ближайшее ${p.d}`,
+  gridHint:p => `Протяните по пустой дорожке, чтобы нарисовать интервал · перетащите блок для перемещения · тяните за края для изменения длины (привязка ${p.step}) · двойной клик открывает блок · <kbd>Del</kbd> удаляет выбранный блок · <kbd>←</kbd>/<kbd>→</kbd> сдвигают его.`,
+  cycTitle:p => ` · по ${p.on} мин каждые ${p.every} мин`, cycBlk:p => ` ↻ ${p.on}/${p.every} мин`,
+  continuesFrom:p => ` (продолжение из «${p.row}»)`,
+  rowsChecked:p => `Отмечено ${p.n} ${pl(p.n,'строка','строки','строк')}`,
+  scopeNote:p => `${p.list} — массовые операции затронут только эти строки`,
+  copyFromRow:'Копировать из строки…', clearChecked:'Очистить отмеченные', uncheckAll:'Снять все флажки',
+  selHint:'Выберите блок на сетке или отредактируйте активную строку в панели справа.',
+  from:'С', to:'По', duration:'Длительность', crossesMidnight:' · переходит через полночь',
+  cyclic:'Цикличный', cycOnLbl:'по', cycEveryLbl:'мин каждые', minSuffix:'мин',
+  copyIntervalTo:'Копировать интервал в…', deleteInterval:'Удалить интервал',
+  usedIn:'Где используется', placesN:p => `${p.n} ${pl(p.n,'место','места','мест')}`,
+  grpArchive:'Запись в архив', grpRoles:'Роли и права', grpMacros:'Макрокоманды',
+  grpExport:'Экспорт видео', grpRepl:'Репликация', notUsed:'Не используется',
+  usedInNote:'Удаление или сужение расписания затрагивает все перечисленные объекты. Конфигуратор предупреждает перед удалением и показывает список зависимых объектов.',
+  calTitle:'Проверка по календарю', calMeta:p => `${p.month} · ${p.d}`,
+  prevMonth:'Предыдущий месяц', nextMonth:'Следующий месяц', thisMonth:'Сегодня',
+  monthTotal:p => `${p.d} в этом месяце`,
+  calNote:'Это итоговый результат: на шаблон наложены срок действия, исключения и список праздников. Нажмите на день, чтобы посмотреть или переопределить его.',
+  legend:'Обозначения', legendBase:'шаблон', legendExc:'исключение', legendHol:'праздник', legendOut:'вне срока действия',
+  calRuleBase:p => `строка шаблона «${p.row}»`, calRuleExc:p => `исключение${p.note ? ' — ' + p.note : ''}`,
+  calRuleHol:'список праздников', calRuleOut:'вне срока действия',
+  calSelected:p => `${p.date}: ${p.rule} · ${p.d}`,
+  calAddExc:'Создать исключение на эту дату', calGoRow:'Открыть строку шаблона',
+  excTitle:'Исключения, праздники и переопределения',
+  rulesN:p => `${p.n} ${pl(p.n,'правило','правила','правил')}`, plusHolidayList:' + список праздников',
+  excMode_none:'Нерабочий (без интервалов)', excMode_full:'Активно 24 часа',
+  excMode_sameAs:'Как строка шаблона…', excMode_custom:'Свои интервалы',
+  excMode_sched:'Как в другом расписании…',
+  sameAsRowLbl:'Строка-источник', sameAsSchedLbl:'Расписание-источник',
+  excNote:'Даты-исключения переопределяют шаблон — праздники, сокращённые предпраздничные дни, плановое обслуживание. При пересечении диапазонов побеждает более узкий; пересечения помечаются.',
+  excFrom:'С', excTo:'По', excDows:'Только в', excDowsAll:'все дни диапазона',
+  excModeLbl:'Поведение', yearly:'ежегодно', commentPh:'Комментарий',
+  removeExc:'Удалить исключение', dupExc:'Дублировать исключение',
+  noExc:'Дат-исключений пока нет.', addException:'＋ Добавить исключение', clearAllExc:'Очистить все',
+  overlapWarn:p => `Пересекается с ${p.n} ${pl(p.n,'другим правилом','другими правилами','другими правилами')} — побеждает более узкий диапазон`,
+  excIntervals:'Интервалы на эти даты', addExcIv:'＋ интервал', delExcIv:'Удалить интервал',
+  holTitle:'Общесерверный список праздников', holApply:'Применять к этому расписанию',
+  holMode:'В праздники', holAdd:'＋ Добавить дату', holRemove:'Удалить дату',
+  holNote:'Год игнорируется — каждая дата списка повторяется ежегодно. Список общий для всех расписаний, правило выше — своё у каждого.',
+  holEmpty:'Список пуст.',
+  advTitle:'Срок действия и точка отсчёта', configured:'настроено', defaults:'по умолчанию',
+  validityPeriod:'Срок действия', validFrom:'Действует с', validTo:'Действует по',
+  validityNote:'Пусто = действует всегда. За пределами периода расписание превращается в «без интервалов», в календаре такие дни серые.',
+  referenceTime:'Точка отсчёта времени',
+  referenceNote:'Интервалы хранятся как смещения внутри шаблона и вычисляются по <b>локальному времени сервера</b>, поэтому переход на летнее время сдвигает «настенное» окно, а не смещение. Если конкретный день перехода нужно обработать иначе — добавьте дату-исключение.',
+  audit:'Аудит', lastModified:'Последнее изменение', identifier:'Идентификатор', justNowYou:'только что · вы',
+  apiTitle:'Предпросмотр запроса к API', intervalsN:p => `${p.n} ${pl(p.n,'интервал','интервала','интервалов')}`,
+  apiNote:'Предпросмотр запроса, который редактор отправит при сохранении. В отличие от v3 он передаёт расписание целиком: тип шаблона и дату начала цикла, сдвиги бригад, срок действия, правило для праздников и все исключения.',
+  inspMeta:p => `${pl(p.n,'Задан','Заданы','Задано')} ${p.n} ${pl(p.n,'интервал','интервала','интервалов')} · ${p.own} собственных · покрыто <b>${p.cov}</b>`,
+  plusCarryOver:p => `↳ плюс перенос из «${p.row}»`,
+  quickFill:'Быстрое заполнение', allDay:'Весь день', invertDay:'Инвертировать строку', clear:'Очистить',
+  intervals:'Интервалы', noIntervals:'Интервалов нет — строка неактивна весь день.',
+  addInterval:'＋ Добавить интервал', startAria:'Начало', endAria:'Окончание',
+  cycOnTitle:p => `Цикличный: по ${p.on} мин каждые ${p.every} мин — нажмите, чтобы сделать непрерывным`,
+  cycOffTitle:'Сделать цикличным', delIntervalAria:'Удалить интервал',
+  continuesTo:p => `↳ продолжается до ${p.t} в «${p.row}»`,
+  copyRowTo:p => `Копировать «${p.row}» в`, selectAll:'Выбрать все', monFri:'Пн–Пт',
+  merge:'Добавить', replace:'Заменить',
+  copyModeNote:'<b>Заменить</b> перезаписывает целевые строки, <b>Добавить</b> дописывает эти интервалы к уже существующим.',
+  statusAria:'Состояние редактора', clockTitle:'Локальное время сервера — по нему вычисляются расписания',
+  resizeSideAria:'Изменить ширину списка расписаний', resizeInspAria:'Изменить ширину панели строки',
+  resizeTitle:'Потяните, чтобы изменить ширину · двойной клик — сброс · ←/→ при фокусе',
+  applyTemplate:'Применить шаблон', tplWeekCap:'Недельные шаблоны', tplCycleCap:'Сменные циклы',
+  fill24:'Заполнить 24 часа', openInInspector:'Открыть в панели справа', clearRow:'Очистить строку',
+  duplicate:'Дублировать', exportThis:'Экспортировать это расписание', deleteEllipsis:'Удалить…',
+  copyFrom:'Копировать из', copyThisIntervalTo:'Копировать этот интервал в', allOtherRows:'Все остальные строки',
+  lastScheduleWarn:'Должно остаться хотя бы одно расписание.',
+  delSchedTitle:'Удалить расписание?',
+  delSchedRefs:p => `«${p.name}» используется в <b>${p.n} ${pl(p.n,'месте','местах','местах')}</b> (роли, макрокоманды, запись в архив, экспорт, репликация). Эти объекты перейдут в режим <i>Никогда</i>, пока вы не назначите им другое расписание.`,
+  delSchedNoRefs:p => `«${p.name}» нигде не используется. Действие нельзя отменить.`,
+  deletedRefs:p => `«${p.name}» удалено — ${p.n} ${pl(p.n,'объект','объекта','объектов')} ${pl(p.n,'остался','остались','остались')} без расписания.`,
+  deleted:p => `«${p.name}» удалено.`,
+  applyTplTitle:'Применить шаблон?',
+  applyTplScoped:p => `Заменить содержимое <b>${p.n} ${pl(p.n,'отмеченной строки','отмеченных строк','отмеченных строк')}</b> шаблоном «${p.tpl}»?`,
+  applyTplWhole:p => `Заменить <b>весь шаблон</b> расписания «${p.name}» на «${p.tpl}»?`,
+  applyTplKind:p => `«${p.tpl}» — это цикл ${p.n} суток. Применение переключит «${p.name}» с недели на цикл ${p.n} суток.`,
+  btnApply:'Применить',
+  clearTitle:'Очистить интервалы?',
+  clearScoped:p => `Очистить ${p.n} ${pl(p.n,'отмеченную строку','отмеченные строки','отмеченных строк')}?`,
+  clearWhole:'Очистить весь шаблон?', btnClear:'Очистить',
+  rowCopied:p => `«${p.row}» ${pl(p.n,'скопирована','скопирована','скопирована')} в ${p.n} ${pl(p.n,'строку','строки','строк')}.`,
+  ivCopied:p => `Интервал скопирован в ${p.n} ${pl(p.n,'строку','строки','строк')}.`,
+  mergedWarn:p => `${p.n} ${pl(p.n,'перекрывающийся интервал слит','перекрывающихся интервала слиты','перекрывающихся интервалов слиты')}. Стыкующиеся интервалы сохранены раздельно.`,
+  savedToast:'Расписание сохранено. Назначенные объекты сразу используют новый шаблон.',
+  savedShort:'Расписание сохранено.',
+  discardTitle:'Отменить изменения?', discardMsg:'Все правки, сделанные после последнего сохранения, будут потеряны.',
+  btnDiscard:'Отменить правки', discardedToast:'Изменения отменены.',
+  switchTitle:'Отбросить несохранённые изменения?',
+  switchMsg:'В текущем расписании есть несохранённые изменения. При переключении они останутся в редакторе — надёжнее сначала сохранить или отменить их.',
+  btnSwitch:'Всё равно переключить',
+  kindTitle:'Изменить тип шаблона?',
+  kindToCycle:p => `Преобразовать неделю расписания «${p.name}» в цикл ${p.n} суток? Первые ${p.n} строк сохранятся, остальные будут отброшены.`,
+  kindToWeek:p => `Преобразовать цикл расписания «${p.name}» обратно в 7-дневную неделю? Первые 7 строк сохранятся и получат подписи «Понедельник»…«Воскресенье».`,
+  btnConvert:'Преобразовать',
+  clearExcTitle:'Очистить все исключения?',
+  clearExcMsg:p => `Будут удалены все ${p.n} ${pl(p.n,'правило','правила','правил')} этого расписания. Список праздников не затрагивается.`,
+  exportToast:'Экспорт подготовлен — конфигуратор скачает набор расписаний в виде JSON-файла.',
+  importToast:'Импорт открывает выбор файла и проверяет JSON по схеме интервалов.',
+  checkTargetWarn:'Сначала отметьте хотя бы одну строку-получателя.',
+  cycleLenWarn:p => `Длина цикла должна быть от 2 до ${p.max} суток.`,
+  newScheduleName:'Новое расписание', copySuffix:'(копия)',
+  tpl_biz:'Рабочие часы',          tplN_biz:'Пн–Пт 09:00–18:00',
+  tpl_ext:'Расширенный офис',      tplN_ext:'Пн–Пт 07:00–21:00',
+  tpl_shift2:'Две смены',          tplN_shift2:'Пн–Пт 06:00–14:00 + 14:00–22:00',
+  tpl_night:'Ночи',                tplN_night:'Ежедневно 22:00–06:00 (+1 д)',
+  tpl_nonwork:'Нерабочее время',   tplN_nonwork:'Пн–Пт 18:00–09:00 + выходные',
+  tpl_wknd:'Выходные',             tplN_wknd:'Сб–Вс круглосуточно',
+  tpl_always:'24 / 7',             tplN_always:'Каждый день, круглосуточно',
+  tpl_motion:'Цикличная выборка',  tplN_motion:'Ежедневно по 5 мин каждые 30 мин',
+  tpl_c22d:'2/2 дневная смена',    tplN_c22d:'Цикл 4 суток · 08:00–20:00',
+  tpl_c22n:'2/2 ночная смена',     tplN_c22n:'Цикл 4 суток · 20:00–08:00 (+1 д)',
+  tpl_c33:'3/3',                   tplN_c33:'Цикл 6 суток · 08:00–20:00',
+  tpl_c44:'4/4',                   tplN_c44:'Цикл 8 суток · 08:00–20:00',
+  tpl_c41:'4/1, скользящие выходные', tplN_c41:'Цикл 5 суток · 09:00–18:00',
+  tpl_vahta:'Вахта 15/15',         tplN_vahta:'Цикл 30 суток · 07:00–19:00',
+  tpl_ab:'Неделя А / неделя Б',    tplN_ab:'Цикл 14 суток · 09:00–18:00, затем 14:00–23:00',
+  sc_biz:'Рабочие часы', sc_night:'Ночная смена', sc_wknd:'Патруль по выходным',
+  sc_server:'Серверная 24/7', sc_cyc:'Выборка в архив (цикл)', sc_shift:'Охрана, бригады 2/2',
+  u_opDay:'Операторы — дневная смена', u_front:'Стойка регистрации', u_guardNight:'Охрана — ночная смена',
+  u_wkndTeam:'Группа патруля по выходным', u_crewAB:'Бригады охраны А–Г',
+  u_armPerim:'Взятие периметра на охрану в нерабочее время', u_lockDoors:'Блокировка дверей после закрытия',
+  u_smsBreach:'SMS-оповещение при проникновении', u_patrolRem:'Напоминания о патрулировании',
+  u_restartRec:'Ночной перезапуск службы записи',
+  u_lobby1:'Камера холла 1 — постоянная запись', u_lobby2:'Камера холла 2 — постоянная запись',
+  u_perim38:'Камеры периметра 3–8', u_serverCam:'Камера серверной', u_parkSampling:'Камера парковки — выборка',
+  u_gateCam:'Камера главных ворот', u_lobbyExp:'Ежедневный экспорт холла', u_wkndExp:'Экспорт инцидентов за выходные',
+  u_serverExp:'Непрерывный экспорт серверной', u_dr1:'Резервная площадка DR-1', u_mirror4:'Внешнее зеркало — стойка 4',
+  ex_nye:'Канун Нового года', ex_nyHol:'Новогодние праздники', ex_preHol:'Сокращённый предпраздничный день',
+  ex_maint:'Плановое обслуживание'
+}};
+function T(k, p){
+  const dict = I18N[S.lang] || I18N.en;
+  const v = dict[k] !== undefined ? dict[k] : I18N.en[k];
+  if(v === undefined) return k;
+  return typeof v === 'function' ? v(p || {}) : v;
+}
+const dayName  = d => T('day_' + d);
+const dayShort = d => T('ds_' + d);
+const dayAcc   = d => T('da_' + d);
+const dayIn    = d => T('dIn_' + d);
+const dayFrom  = d => T('dFrom_' + d);
+
+/* ── time helpers ─────────────────────────────────────────────── */
+const p2 = n => (n < 10 ? '0' : '') + n;
+function fmt(min, use12){
+  const m = ((min % DAY_MIN) + DAY_MIN) % DAY_MIN, h = Math.floor(m / 60), mm = m % 60;
+  if(!use12) return p2(h) + ':' + p2(mm);
+  const ap = h < 12 ? 'AM' : 'PM', h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + ':' + p2(mm) + ' ' + ap;
+}
+function fmtEnd(min, use12){ return min >= DAY_MIN && min % DAY_MIN === 0 ? (use12 ? '12:00 AM (+1d)' : '24:00') : fmt(min, use12) + (min > DAY_MIN ? ' (+1d)' : ''); }
+const hm    = min => p2(Math.floor((((min % DAY_MIN) + DAY_MIN) % DAY_MIN) / 60)) + ':' + p2(min % 60);
+const parseHM = s => { if(!s) return 0; const [a,b] = s.split(':'); return (+a || 0) * 60 + (+b || 0); };
+function dur(min){
+  if(min <= 0) return T('zeroMin');
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  return (h ? h + ' ' + T('unitH') : '') + (h && m ? ' ' : '') + (m ? m + ' ' + T('unitMin') : '');
+}
+const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ── date helpers ─────────────────────────────────────────────── */
+const iso      = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const parseISO = s => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+const addDays  = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const dayDiff  = (a, b) => Math.round((a - b) / 86400000);
+const todayISO = () => iso(new Date());
+const dowIdx   = d => (d.getDay() + 6) % 7;              // 0 = Monday
+const localeOf = () => (LANGS.find(l => l.id === S.lang) || LANGS[0]).locale;
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtDate  = d => parseISO(d).toLocaleDateString(localeOf(), { day:'numeric', month:'long', year:'numeric' });
+const fmtDateShort = d => parseISO(d).toLocaleDateString(localeOf(), { day:'2-digit', month:'2-digit' });
+const monthTitle = (y, m) => capFirst(new Date(y, m, 1).toLocaleDateString(localeOf(), { month:'long', year:'numeric' }));
+
+/* ── interval maths ───────────────────────────────────────────── */
+/**
+ * Merge only intervals that genuinely overlap. Touching intervals
+ * (14:00 right after 06:00–14:00) stay separate so that shift
+ * boundaries survive editing — this was defect #5 in v3.
+ * Returns { list, merged } so callers can report what happened.
+ */
+function normalize(list){
+  const cyc = (list || []).filter(r => r.cyc);
+  const plain = (list || []).filter(r => !r.cyc && r.len > 0).slice().sort((a, b) => a.start - b.start || a.len - b.len);
+  const out = []; let merged = 0;
+  for(const r of plain){
+    const last = out[out.length - 1];
+    if(last && r.start < last.start + last.len){          // strict overlap only
+      last.len = Math.max(last.start + last.len, r.start + r.len) - last.start;
+      merged++;
+    } else out.push({ id:r.id || nid(), start:r.start, len:r.len, cyc:null });
+  }
+  return { list:out.concat(cyc).sort((a, b) => a.start - b.start), merged };
+}
+/** Remove [from,to) from every plain interval of the list (erase tool). */
+function subtract(list, from, to){
+  const out = [];
+  for(const r of list){
+    const s = r.start, e = r.start + r.len;
+    if(r.cyc || to <= s || from >= e){ out.push(r); continue; }
+    if(from > s) out.push({ id:nid(), start:s, len:from - s, cyc:null });
+    if(to < e)   out.push({ id:nid(), start:to, len:e - to, cyc:null });
+  }
+  return normalize(out).list;
+}
+/** Effective active minutes inside a `span` window (cyclic pulses count partially). */
+function activeMinutes(r, span){
+  if(span <= 0) return 0;
+  if(!r.cyc) return span;
+  return (span / r.cyc.every) * Math.min(r.cyc.on, r.cyc.every);
+}
+/** CSS gradient for the mini-preview strips. Cyclic ranges are drawn faded. */
+function strip(list){
+  const spans = (list || []).flatMap(r => {
+    const c = r.cyc ? 'var(--accent-half)' : 'var(--accent)';
+    const out = [{ from:Math.max(0, r.start), to:Math.min(r.start + r.len, DAY_MIN), c }];
+    if(r.start + r.len > DAY_MIN) out.push({ from:0, to:Math.min(r.start + r.len - DAY_MIN, DAY_MIN), c });
+    return out;
+  }).filter(s => s.to > s.from).sort((a, b) => a.from - b.from);
+  if(!spans.length) return '';
+  const stops = spans.map(s => {
+    const a = (s.from / DAY_MIN * 100).toFixed(2), b = (s.to / DAY_MIN * 100).toFixed(2);
+    return `transparent ${a}%, ${s.c} ${a}%, ${s.c} ${b}%, transparent ${b}%`;
+  });
+  return `linear-gradient(to right, transparent 0%, ${stops.join(', ')}, transparent 100%)`;
+}
+
+/* ── pattern helpers ──────────────────────────────────────────── */
+const isWeek  = s => s.pattern.kind === 'week';
+const patLen  = s => s.pattern.len;
+const patRows = s => s.pattern.days;
+const rowLabel = (s, i) => isWeek(s) ? dayName(DAYS[i]) : T('cycleDay', { n:i + 1 });
+const rowShort = (s, i) => isWeek(s) ? dayShort(DAYS[i]) : String(i + 1);
+const prevRow  = (s, i) => (i - 1 + patLen(s)) % patLen(s);
+const nextRow  = (s, i) => (i + 1) % patLen(s);
+const mkPattern = (kind, len, anchor) => ({ kind, len, anchor: anchor || todayISO(),
+  days: Array.from({ length:len }, () => []) });
+
+/**
+ * Which pattern row a calendar date falls on.
+ * `crew` defaults to the crew currently previewed for the edited schedule;
+ * other schedules always resolve against crew 1.
+ */
+function rowIndexFor(s, dISO, crew){
+  if(isWeek(s)) return dowIdx(parseISO(dISO));
+  const c = crew === undefined ? (s.id === S.selectedId ? S.crewView : 0) : crew;
+  const off = c * (s.crewStep || 0);
+  const n = dayDiff(parseISO(dISO), parseISO(s.pattern.anchor)) - off;
+  return ((n % patLen(s)) + patLen(s)) % patLen(s);
+}
+/** Nearest date from today on which the given row comes up again. */
+function nextDateForRow(s, i){
+  const t = new Date();
+  for(let k = 0; k < Math.max(8, patLen(s) + 1); k++){
+    const d = addDays(t, k);
+    if(rowIndexFor(s, iso(d)) === i) return iso(d);
+  }
+  return null;
+}
+
+/* ══ THE RESOLVER ═══════════════════════════════════════════════
+   Everything user-visible is derived from this: the calendar, hour
+   totals, the "active now" pill and the API payload. In v3 these
+   settings were stored but never consulted.
+   ═══════════════════════════════════════════════════════════════ */
+/** Does an exception cover this date? Honours the yearly flag and the weekday filter. */
+function exMatches(e, dISO){
+  if(!e.from) return false;
+  const to = e.to || e.from;
+  if(e.yearly){
+    const md = dISO.slice(5), a = e.from.slice(5), b = to.slice(5);
+    const inside = a <= b ? (md >= a && md <= b) : (md >= a || md <= b);
+    if(!inside) return false;
+  } else if(dISO < e.from || dISO > to) return false;
+  if(e.dows && e.dows.length && !e.dows.includes(DAYS[dowIdx(parseISO(dISO))])) return false;
+  return true;
+}
+/** Range width in days — used as the specificity score (narrower wins). */
+const exSpan = e => e.from ? Math.max(0, dayDiff(parseISO(e.to || e.from), parseISO(e.from))) : 9999;
+/** The winning exception for a date: narrowest range, then latest in the list. */
+function pickException(s, dISO){
+  let best = null, bestSpan = Infinity;
+  (s.exceptions || []).forEach(e => {
+    if(!exMatches(e, dISO)) return;
+    const sp = exSpan(e);
+    if(sp <= bestSpan){ best = e; bestSpan = sp; }
+  });
+  return best;
+}
+const isHoliday = dISO => S.holidays.some(h => h.slice(5) === dISO.slice(5));
+/** Turn a rule (exception or holiday rule) into a concrete interval list. */
+function applyRule(s, mode, cfg, dISO, crew, depth){
+  switch(mode){
+    case 'none': return [];
+    case 'full': return [{ id:'full', start:0, len:DAY_MIN, cyc:null }];
+    case 'sameAs': return patRows(s)[Math.min(cfg.sameAsRow || 0, patLen(s) - 1)] || [];
+    case 'custom': return cfg.iv || [];
+    case 'sched': {
+      const other = S.items[cfg.schedId];
+      if(!other || other.id === s.id || depth > 0) return [];
+      return effectiveOn(other, dISO, undefined, depth + 1).iv;
+    }
+    default: return [];
+  }
+}
+/**
+ * What a calendar date actually looks like.
+ * Priority: validity period → exception → holiday list → pattern row.
+ * @returns {{iv:Array, rule:'base'|'exception'|'holiday'|'outside', row?:number, src?:object}}
+ */
+function effectiveOn(s, dISO, crew, depth){
+  depth = depth || 0;
+  if(s.validFrom && dISO < s.validFrom) return { iv:[], rule:'outside' };
+  if(s.validTo   && dISO > s.validTo)   return { iv:[], rule:'outside' };
+  const ex = pickException(s, dISO);
+  if(ex) return { iv:applyRule(s, ex.mode, ex, dISO, crew, depth), rule:'exception', src:ex };
+  if(s.useHolidayList && isHoliday(dISO))
+    return { iv:applyRule(s, s.holidayMode, s, dISO, crew, depth), rule:'holiday' };
+  const row = rowIndexFor(s, dISO, crew);
+  return { iv:patRows(s)[row] || [], rule:'base', row };
+}
+/** Minutes covered on a calendar date, carry-in capped at 24 h (defect #4). */
+function coveredOnDate(s, dISO, crew){
+  const own  = effectiveOn(s, dISO, crew).iv;
+  const prev = effectiveOn(s, iso(addDays(parseISO(dISO), -1)), crew).iv;
+  let m = 0;
+  own.forEach(r => { m += activeMinutes(r, Math.min(r.len, DAY_MIN - r.start)); });
+  prev.forEach(r => { const over = Math.min(r.start + r.len - DAY_MIN, DAY_MIN); if(over > 0) m += activeMinutes(r, over); });
+  return Math.round(Math.min(m, DAY_MIN));
+}
+/** Minutes covered by a pattern row itself, incl. carry-in from the previous row. */
+function coveredOnRow(s, i){
+  let m = 0;
+  (patRows(s)[i] || []).forEach(r => { m += activeMinutes(r, Math.min(r.len, DAY_MIN - r.start)); });
+  (patRows(s)[prevRow(s, i)] || []).forEach(r => {
+    const over = Math.min(r.start + r.len - DAY_MIN, DAY_MIN); if(over > 0) m += activeMinutes(r, over); });
+  return Math.round(Math.min(m, DAY_MIN));
+}
+const patternMinutes = s => patRows(s).reduce((n, row) =>
+  n + row.reduce((k, r) => k + activeMinutes(r, r.len), 0), 0);
+/** Actual minutes in a calendar month — pattern plus every override. */
+function monthMinutes(s, y, m, crew){
+  const last = new Date(y, m + 1, 0).getDate();
+  let n = 0;
+  for(let d = 1; d <= last; d++) n += coveredOnDate(s, iso(new Date(y, m, d)), crew);
+  return n;
+}
+function isActiveNow(s){
+  const now = new Date(), t = nowMin();
+  const hit = (list, offset) => (list || []).some(r => {
+    const st = r.start - offset, en = st + r.len;
+    if(t < st || t >= en) return false;
+    if(!r.cyc) return true;
+    return (t - st) % r.cyc.every < r.cyc.on;
+  });
+  return hit(effectiveOn(s, iso(now)).iv, 0) || hit(effectiveOn(s, iso(addDays(now, -1))).iv, DAY_MIN);
+}
+/** Strip for a pattern row: own intervals plus what carries in from the row before. */
+const stripRow = (s, i) => strip((patRows(s)[i] || []).concat(
+  (patRows(s)[prevRow(s, i)] || []).filter(r => r.start + r.len > DAY_MIN)
+    .map(r => ({ ...r, start:r.start - DAY_MIN }))));
+/** Strip for a calendar date, resolver-driven (used by the calendar cells). */
+const stripDate = (s, dISO) => {
+  const own = effectiveOn(s, dISO).iv;
+  const carry = effectiveOn(s, iso(addDays(parseISO(dISO), -1))).iv
+    .filter(r => r.start + r.len > DAY_MIN).map(r => ({ ...r, start:r.start - DAY_MIN }));
+  return strip(own.concat(carry));
+};
+/** Which exception rows overlap other rows — surfaced as a warning badge. */
+function overlapMap(s){
+  const map = {};
+  const list = s.exceptions || [];
+  for(let i = 0; i < list.length; i++) for(let j = i + 1; j < list.length; j++){
+    const a = list[i], b = list[j];
+    if(!a.from || !b.from) continue;
+    const aTo = a.to || a.from, bTo = b.to || b.from;
+    const hit = a.yearly || b.yearly
+      ? !(aTo.slice(5) < b.from.slice(5) || bTo.slice(5) < a.from.slice(5))
+      : !(aTo < b.from || bTo < a.from);
+    if(!hit) continue;
+    const da = a.dows || [], db = b.dows || [];
+    if(da.length && db.length && !da.some(x => db.includes(x))) continue;
+    map[a.id] = (map[a.id] || 0) + 1; map[b.id] = (map[b.id] || 0) + 1;
+  }
+  return map;
+}
+
+/* ── templates ────────────────────────────────────────────────── */
+const rep = (n, iv) => Array.from({ length:n }, () => iv.map(r => ({ ...r })));
+const TEMPLATES = [
+  { id:'biz',    kind:'week', days:['Mon','Tue','Wed','Thu','Fri'], iv:[{start:540,len:540}] },
+  { id:'ext',    kind:'week', days:['Mon','Tue','Wed','Thu','Fri'], iv:[{start:420,len:840}] },
+  { id:'shift2', kind:'week', days:['Mon','Tue','Wed','Thu','Fri'], iv:[{start:360,len:480},{start:840,len:480}] },
+  { id:'night',  kind:'week', days:DAYS, iv:[{start:1320,len:480}] },
+  { id:'nonwork',kind:'week', days:DAYS, iv:[{start:1080,len:900}], weekendFull:true },
+  { id:'wknd',   kind:'week', days:['Sat','Sun'], iv:[{start:0,len:1440}] },
+  { id:'always', kind:'week', days:DAYS, iv:[{start:0,len:1440}] },
+  { id:'motion', kind:'week', days:DAYS, iv:[{start:0,len:1440,cyc:{every:30,on:5}}] },
+  /* cycles — the family v3 could not express at all */
+  { id:'c22d',  kind:'cycle', len:4,  rows:() => rep(2, [{start:480,len:720}]).concat(rep(2, [])) },
+  { id:'c22n',  kind:'cycle', len:4,  rows:() => rep(2, [{start:1200,len:720}]).concat(rep(2, [])) },
+  { id:'c33',   kind:'cycle', len:6,  rows:() => rep(3, [{start:480,len:720}]).concat(rep(3, [])) },
+  { id:'c44',   kind:'cycle', len:8,  rows:() => rep(4, [{start:480,len:720}]).concat(rep(4, [])) },
+  { id:'c41',   kind:'cycle', len:5,  rows:() => rep(4, [{start:540,len:540}]).concat(rep(1, [])) },
+  { id:'vahta', kind:'cycle', len:30, rows:() => rep(15, [{start:420,len:720}]).concat(rep(15, [])) },
+  { id:'ab',    kind:'cycle', len:14, rows:() => rep(5, [{start:540,len:540}]).concat(rep(2, []))
+      .concat(rep(5, [{start:840,len:540}])).concat(rep(2, [])) }
+];
+const tplLabel = t => T('tpl_' + t.id);
+const tplNote  = t => T('tplN_' + t.id);
+/** Rows a template produces, always as a fresh array of arrays. */
+function tplRows(tpl){
+  if(tpl.kind === 'cycle') return tpl.rows().map(row => row.map(r => ({ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null })));
+  return DAYS.map(d => {
+    if(tpl.weekendFull && (d === 'Sat' || d === 'Sun')) return [{ id:nid(), start:0, len:DAY_MIN, cyc:null }];
+    return tpl.days.includes(d) ? tpl.iv.map(r => ({ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null })) : [];
+  });
+}
+
+/* ── seed data ────────────────────────────────────────────────── */
+function seed(){
+  const mk = (nameKey, tplId, extra) => {
+    const tpl = TEMPLATES.find(t => t.id === tplId);
+    const rows = tplRows(tpl);
+    return Object.assign({
+      id:nid('s'), nameKey, name:'',
+      pattern:{ kind:tpl.kind, len:rows.length, anchor:'2026-09-01', days:rows },
+      crewCount:1, crewStep:0,
+      exceptions:[], useHolidayList:false, holidayMode:'none', holidaySameAsRow:6,
+      validFrom:'', validTo:'', modified:'2026-09-05 14:12 · a.ivanov'
+    }, extra || {});
+  };
+  const a = mk('sc_biz','biz',{ useHolidayList:true, holidayMode:'none', usedIn:{
+      roles:['u_opDay','u_front'], macros:['u_armPerim'], archive:['u_lobby1','u_lobby2'],
+      exportTasks:['u_lobbyExp'], replication:['u_dr1'] },
+    exceptions:[
+      { id:nid('e'), from:'2026-12-31', to:'2026-12-31', mode:'custom', noteKey:'ex_preHol', note:'',
+        yearly:true, dows:[], sameAsRow:6, schedId:'', iv:[{ id:nid(), start:540, len:240, cyc:null }, { id:nid(), start:840, len:180, cyc:null }] },
+      { id:nid('e'), from:'2027-01-01', to:'2027-01-08', mode:'none', noteKey:'ex_nyHol', note:'',
+        yearly:false, dows:[], sameAsRow:6, schedId:'', iv:[] }
+    ]});
+  const b = mk('sc_night','night',{ usedIn:{ roles:['u_guardNight'],
+      macros:['u_lockDoors','u_smsBreach'], archive:['u_perim38'], exportTasks:[], replication:['u_dr1'] } });
+  const c = mk('sc_shift','c22d',{ crewCount:4, crewStep:1, usedIn:{ roles:['u_crewAB'],
+      macros:['u_patrolRem'], archive:['u_gateCam'], exportTasks:[], replication:[] },
+    exceptions:[{ id:nid('e'), from:'2026-11-16', to:'2026-11-20', mode:'sameAs', noteKey:'ex_maint', note:'',
+      yearly:false, dows:['Mon','Wed','Fri'], sameAsRow:0, schedId:'', iv:[] }] });
+  const d = mk('sc_wknd','wknd',{ usedIn:{ roles:['u_wkndTeam'], macros:['u_patrolRem'],
+      archive:[], exportTasks:['u_wkndExp'], replication:[] } });
+  const e = mk('sc_server','always',{ usedIn:{ roles:[], macros:['u_restartRec'],
+      archive:['u_serverCam'], exportTasks:['u_serverExp'], replication:['u_mirror4'] } });
+  const f = mk('sc_cyc','motion',{ usedIn:{ roles:[], macros:[], archive:['u_parkSampling'], exportTasks:[], replication:[] } });
+  const items = {}; [a,b,c,d,e,f].forEach(s => items[s.id] = s);
+  return { order:[a.id,b.id,c.id,d.id,e.id,f.id], items, selectedId:a.id };
+}
+const schedName = s => s.name || (s.nameKey ? T(s.nameKey) : '');
+const excNote   = e => e.note || (e.noteKey ? T(e.noteKey) : '');
+
+/* ── state ────────────────────────────────────────────────────── */
+const PANEL = { side:{ min:200, max:460, def:268 }, insp:{ min:256, max:520, def:306 } };
+const MAIN_MIN = 520;
+const MSG_MS = 4500, MSG_MS_SAVE = 6500;
+
+const S = Object.assign({
+  search:'', tool:'draw', step:15, use12:false, scheme:'light', lang:'en',
+  checked:new Set(), focusRow:0, sel:null, cpTargets:new Set(),
+  undo:[], redo:[], dirty:false, saved:null,
+  panels:{ usedIn:false, calendar:true, exceptions:false, advanced:false, api:false },
+  sideW:PANEL.side.def, inspW:PANEL.insp.def,
+  /* server-wide holiday list — the year is ignored, every date is annual */
+  holidays:['2026-01-01','2026-01-07','2026-02-23','2026-03-08','2026-05-01','2026-05-09','2026-06-12','2026-11-04'],
+  cal:{ y:new Date().getFullYear(), m:new Date().getMonth() }, calSel:null,
+  crewView:0, pop:null, modal:null, msg:null, drag:null, rs:null
+}, seed());
+S.focusRow = 0;
+S.saved = snap();
+
+const cur  = () => S.items[S.selectedId];
+const rows = () => patRows(cur());
+function snap(){ return JSON.stringify({ items:S.items, order:S.order, holidays:S.holidays }); }
+function pushUndo(){ S.undo.push(snap()); if(S.undo.length > 60) S.undo.shift(); S.redo.length = 0; S.dirty = snap() !== S.saved; }
+function restore(json){
+  const o = JSON.parse(json); S.items = o.items; S.order = o.order; S.holidays = o.holidays;
+  if(!S.items[S.selectedId]) S.selectedId = S.order[0];
+  S.sel = null; S.focusRow = Math.min(S.focusRow, patLen(cur()) - 1);
+  S.dirty = snap() !== S.saved;
+}
+function doUndo(){ if(!S.undo.length) return; S.redo.push(snap()); restore(S.undo.pop()); render(); }
+function doRedo(){ if(!S.redo.length) return; S.undo.push(snap()); restore(S.redo.pop()); render(); }
+/** Every mutation goes through this: snapshot for undo, then re-render. */
+function edit(fn){ pushUndo(); fn(); S.dirty = snap() !== S.saved; render(); }
+/** Commit a row and report overlap merges instead of doing it silently (defect #5). */
+function setRow(i, list){
+  const n = normalize(list);
+  rows()[i] = n.list;
+  if(n.merged) notify('warning', T('mergedWarn', { n:n.merged }));
+}
+
+/* ── status line & clock ──────────────────────────────────────── */
+function notify(kind, text, ms){
+  const m = { id:nid('m'), kind, text };
+  S.msg = m; render();
+  setTimeout(() => { if(S.msg && S.msg.id === m.id){ S.msg = null; render(); } }, ms || MSG_MS);
+}
+function statusMsg(){
+  if(S.msg) return S.msg;
+  if(S.dirty) return { kind:'warning', text:T('unsaved') };
+  return null;
+}
+function clockParts(){
+  const d = new Date(), loc = localeOf();
+  return {
+    day: capFirst(d.toLocaleDateString(loc, { weekday:'long' })) + ', ' +
+         d.toLocaleDateString(loc, { day:'numeric', month:'long', year:'numeric' }),
+    time: d.toLocaleTimeString(loc, { hour:S.use12 ? 'numeric' : '2-digit',
+      minute:'2-digit', second:'2-digit', hour12:S.use12 })
+  };
+}
+function confirmThen(title, msg, label, fn){ S.modal = { title, msg, label, fn }; render(); }
+
+/* ── mutations ────────────────────────────────────────────────── */
+function addSchedule(){
+  edit(() => {
+    const s = { id:nid('s'), name:'', nameKey:'newScheduleName', pattern:mkPattern('week', 7),
+      crewCount:1, crewStep:0, exceptions:[], useHolidayList:false, holidayMode:'none',
+      holidaySameAsRow:6, validFrom:'', validTo:'', modified:'—',
+      usedIn:{roles:[],macros:[],archive:[],exportTasks:[],replication:[]} };
+    S.items[s.id] = s; S.order.push(s.id); S.selectedId = s.id;
+    S.checked.clear(); S.focusRow = 0; S.sel = null;
+  });
+}
+function duplicateSchedule(id){
+  edit(() => {
+    const src = S.items[id], copy = JSON.parse(JSON.stringify(src));
+    copy.id = nid('s'); copy.name = schedName(src) + ' ' + T('copySuffix'); copy.nameKey = null; copy.modified = '—';
+    copy.usedIn = {roles:[],macros:[],archive:[],exportTasks:[],replication:[]};
+    copy.pattern.days.forEach(row => row.forEach(r => r.id = nid()));
+    copy.exceptions.forEach(e => { e.id = nid('e'); (e.iv || []).forEach(r => r.id = nid()); });
+    S.items[copy.id] = copy; S.order.splice(S.order.indexOf(id) + 1, 0, copy.id); S.selectedId = copy.id;
+  });
+}
+function usageCount(s){ const u = s.usedIn || {}; return ['roles','macros','archive','exportTasks','replication'].reduce((n, k) => n + (u[k] || []).length, 0); }
+function deleteSchedule(id){
+  if(S.order.length <= 1){ notify('warning', T('lastScheduleWarn')); return; }
+  const s = S.items[id], n = usageCount(s), name = esc(schedName(s));
+  confirmThen(T('delSchedTitle'),
+    n ? T('delSchedRefs', { name, n }) : T('delSchedNoRefs', { name }),
+    T('btnDelete'), () => {
+      edit(() => { delete S.items[id]; S.order = S.order.filter(x => x !== id);
+        if(S.selectedId === id){ S.selectedId = S.order[0]; S.focusRow = 0; S.sel = null; } });
+      notify(n ? 'warning' : 'info', n ? T('deletedRefs', { name, n }) : T('deleted', { name }), n ? 6000 : 3000);
+    });
+}
+function applyTemplate(tpl){
+  const s = cur(), scoped = S.checked.size > 0;
+  const kindChange = tpl.kind === 'cycle' ? (isWeek(s) || patLen(s) !== tpl.len)
+                                          : !isWeek(s);
+  let msg;
+  if(kindChange) msg = T('applyTplKind', { tpl:esc(tplLabel(tpl)), name:esc(schedName(s)), n:tpl.kind === 'cycle' ? tpl.len : 7 });
+  else if(scoped) msg = T('applyTplScoped', { n:S.checked.size, tpl:esc(tplLabel(tpl)) });
+  else msg = T('applyTplWhole', { name:esc(schedName(s)), tpl:esc(tplLabel(tpl)) });
+  confirmThen(T('applyTplTitle'), msg, T('btnApply'), () => edit(() => {
+    const src = tplRows(tpl);
+    if(scoped && !kindChange){
+      S.checked.forEach(i => { if(src[i]) rows()[i] = src[i]; });
+    } else {
+      s.pattern = { kind:tpl.kind, len:src.length, anchor:s.pattern.anchor || todayISO(), days:src };
+      if(tpl.kind === 'week'){ s.crewCount = 1; s.crewStep = 0; S.crewView = 0; }
+      S.checked.clear(); S.focusRow = Math.min(S.focusRow, src.length - 1);
+    }
+    S.sel = null;
+  }));
+}
+function clearPattern(){
+  const scoped = S.checked.size > 0;
+  confirmThen(T('clearTitle'), scoped ? T('clearScoped', { n:S.checked.size }) : T('clearWhole'),
+    T('btnClear'), () => edit(() => {
+      if(scoped) S.checked.forEach(i => rows()[i] = []);
+      else rows().forEach((_, i) => rows()[i] = []);
+      S.sel = null;
+    }));
+}
+function invertRows(){
+  edit(() => {
+    const targets = S.checked.size ? Array.from(S.checked) : rows().map((_, i) => i);
+    targets.forEach(i => {
+      const src = normalize((rows()[i] || []).filter(r => !r.cyc)).list;
+      const out = []; let cursor = 0;
+      src.forEach(r => { const st = Math.max(0, r.start); if(st > cursor) out.push({ id:nid(), start:cursor, len:st - cursor, cyc:null });
+        cursor = Math.max(cursor, Math.min(DAY_MIN, r.start + r.len)); });
+      if(cursor < DAY_MIN) out.push({ id:nid(), start:cursor, len:DAY_MIN - cursor, cyc:null });
+      rows()[i] = out;
+    });
+    S.sel = null;
+  });
+}
+function copyRowTo(from, targets, mode){
+  edit(() => {
+    const src = rows()[from] || [];
+    targets.forEach(i => { if(i === from) return;
+      const clone = src.map(r => ({ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null }));
+      setRow(i, mode === 'merge' ? (rows()[i] || []).concat(clone) : clone);
+    });
+  });
+  notify('success', T('rowCopied', { row:rowLabel(cur(), from), n:targets.filter(i => i !== from).length }));
+}
+/** Switch between a 7-day week and an N-day cycle, keeping what fits. */
+function setKind(kind, len){
+  const s = cur();
+  const n = kind === 'week' ? 7 : Math.max(2, Math.min(len || 4, MAX_CYCLE));
+  const msg = kind === 'cycle' ? T('kindToCycle', { name:esc(schedName(s)), n }) : T('kindToWeek', { name:esc(schedName(s)) });
+  confirmThen(T('kindTitle'), msg, T('btnConvert'), () => edit(() => {
+    const old = patRows(s);
+    const days = Array.from({ length:n }, (_, i) => (old[i] || []).map(r => ({ ...r, id:nid() })));
+    s.pattern = { kind, len:n, anchor:s.pattern.anchor || todayISO(), days };
+    if(kind === 'week'){ s.crewCount = 1; s.crewStep = 0; S.crewView = 0; }
+    S.checked.clear(); S.focusRow = Math.min(S.focusRow, n - 1); S.sel = null;
+  }));
+}
+function setCycleLen(n){
+  const s = cur();
+  if(!(n >= 2 && n <= MAX_CYCLE)){ notify('warning', T('cycleLenWarn', { max:MAX_CYCLE })); return; }
+  edit(() => {
+    const old = patRows(s);
+    s.pattern.days = Array.from({ length:n }, (_, i) => (old[i] || []).map(r => ({ ...r, id:nid() })));
+    s.pattern.len = n;
+    s.crewStep = Math.min(s.crewStep, n - 1);
+    S.focusRow = Math.min(S.focusRow, n - 1);
+    S.checked = new Set(Array.from(S.checked).filter(i => i < n));
+    S.sel = null;
+  });
+}
+/* exceptions */
+const sortEx = s => s.exceptions.sort((a, b) => (a.from || '').localeCompare(b.from || '') ||
+  (a.to || '').localeCompare(b.to || ''));
+function addException(dateISO){
+  edit(() => {
+    const d = dateISO || todayISO();
+    cur().exceptions.push({ id:nid('e'), from:d, to:d, mode:'none', note:'', noteKey:null,
+      yearly:false, dows:[], sameAsRow:0, schedId:'', iv:[] });
+    sortEx(cur());
+  });
+  S.panels.exceptions = true; render();
+}
+function dupException(id){
+  edit(() => {
+    const src = cur().exceptions.find(e => e.id === id); if(!src) return;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = nid('e'); copy.noteKey = null; copy.note = excNote(src);
+    (copy.iv || []).forEach(r => r.id = nid());
+    cur().exceptions.push(copy); sortEx(cur());
+  });
+}
+function clearExceptions(){
+  const n = cur().exceptions.length; if(!n) return;
+  confirmThen(T('clearExcTitle'), T('clearExcMsg', { n }), T('btnClear'),
+    () => edit(() => cur().exceptions = []));
+}
+
+/* ═══════════════ RENDER ═══════════════════════════════════════ */
+const shell = document.getElementById('shell');
+let raf = null;
+function render(){ if(raf) return; raf = requestAnimationFrame(() => { raf = null; paint(); }); }
+
+function paint(){
+  const fk = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-fk');
+  const selStart = fk && document.activeElement.selectionStart, selEnd = fk && document.activeElement.selectionEnd;
+  document.body.setAttribute('data-scheme', S.scheme);
+  document.documentElement.setAttribute('lang', S.lang);
+  document.title = T('sideTitle') + ' — ' + T('brand') + ' (v4)';
+  document.getElementById('appbar').innerHTML = viewAppbar();
+  shell.innerHTML = viewSide() + splitter('side') + viewMain() + splitter('insp') + viewInsp();
+  document.getElementById('overlays').innerHTML = viewPop() + viewModal();
+  if(fk){
+    const el = shell.querySelector(`[data-fk="${fk}"]`) || document.querySelector(`[data-fk="${fk}"]`);
+    if(el){ el.focus(); try{ el.setSelectionRange(selStart, selEnd); }catch(e){} }
+  }
+}
+function tickClock(){
+  const c = clockParts();
+  const d = shell.querySelector('[data-clk=day]'), t = shell.querySelector('[data-clk=time]');
+  if(d) d.textContent = c.day;
+  if(t) t.textContent = c.time;
+}
+function splitter(which){
+  const w = which === 'side' ? S.sideW : S.inspW, p = PANEL[which];
+  return `<div class="splitter" data-split="${which}" role="separator" aria-orientation="vertical" tabindex="0"
+    aria-label="${which === 'side' ? T('resizeSideAria') : T('resizeInspAria')}" title="${T('resizeTitle')}"
+    aria-valuenow="${w}" aria-valuemin="${p.min}" aria-valuemax="${p.max}"></div>`;
+}
+
+/* ── top bar ──────────────────────────────────────────────────── */
+function viewAppbar(){
+  const tabs = ['navDevices','navGroups','navDetectors','navArchives','navRoles',
+                'navSchedules','navMacros','navAudit','navSettings'];
+  return `<span class="brand">${T('brand')}</span>
+    <nav class="tabs" aria-label="${T('navAria')}">
+      ${tabs.map(k => `<button type="button" ${k === 'navSchedules' ? 'aria-current="page"' : ''}>${T(k)}</button>`).join('')}
+    </nav>
+    <span class="grow"></span>
+    <div class="row" style="gap:6px">
+      <select class="langsel" data-act="lang" aria-label="${T('langAria')}" title="${T('langAria')}">
+        ${LANGS.map(l => `<option value="${l.id}" ${S.lang === l.id ? 'selected' : ''}>${l.label}</option>`).join('')}
+      </select>
+      <div class="seg" role="group" aria-label="${T('fmtAria')}">
+        <button type="button" data-act="fmt" data-v="24" aria-pressed="${!S.use12}">${T('h24')}</button>
+        <button type="button" data-act="fmt" data-v="12" aria-pressed="${S.use12}">${T('h12')}</button>
+      </div>
+      <button class="btn btn--subtle btn--icon" type="button" data-act="theme"
+        title="${T('themeTitle')}" aria-label="${T('themeAria')}">◐</button>
+    </div>`;
+}
+
+/* ── left panel ───────────────────────────────────────────────── */
+function viewSide(){
+  const q = S.search.trim().toLowerCase();
+  const list = S.order.filter(id => !q || schedName(S.items[id]).toLowerCase().includes(q)).map(id => {
+    const s = S.items[id], sel = id === S.selectedId, n = usageCount(s);
+    const shown = Math.min(patLen(s), 7);
+    const strips = Array.from({ length:shown }, (_, i) => {
+      const g = stripRow(s, i);
+      return `<i style="${g ? 'background-image:' + g : ''}"></i>`;
+    }).join('');
+    const total = Math.round(patternMinutes(s));
+    const meta = isWeek(s) ? T('perWeek', { d:dur(total) }) : T('perCycle', { d:dur(total), n:patLen(s) });
+    return `<div class="sched" role="option" aria-selected="${sel}" data-act="pick" data-id="${id}" tabindex="0">
+      <div class="row" style="gap:6px">
+        <div class="sched__name grow">${esc(schedName(s))}</div>
+        ${isActiveNow(s) ? `<span class="dot" title="${T('activeRightNow')}"></span>` : ''}
+      </div>
+      <div class="sched__strip" aria-hidden="true">${strips}</div>
+      <div class="sched__meta">${meta} · ${T('usesN', { n })}
+        ${isWeek(s) ? '' : `<span class="kindtag">${T('patCycle')} ${patLen(s)}</span>`}</div>
+      <button class="btn btn--subtle btn--sm btn--icon sched__kebab" type="button" data-act="schedMenu" data-id="${id}"
+        aria-label="${T('schedActionsAria')}">⋯</button>
+    </div>`;
+  }).join('');
+  return `<aside class="side" style="width:${S.sideW}px">
+    <div class="side__head">
+      <div class="side__title">${T('sideTitle')}</div>
+      <p class="hint" style="margin:0">${T('sideNote')}</p>
+      <input class="inp" data-fk="search" data-act="search" placeholder="${T('searchPh')}" value="${esc(S.search)}" aria-label="${T('searchPh')}">
+      <button class="btn btn--outline" type="button" data-act="add">${T('newSchedule')}</button>
+    </div>
+    <div class="side__list" role="listbox" aria-label="${T('schedulesAria')}">${list || `<p class="hint" style="padding:8px 10px">${T('noMatches')}</p>`}</div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border-default)" class="row">
+      <button class="btn btn--subtle btn--sm grow" type="button" data-act="import">${T('importJson')}</button>
+      <button class="btn btn--subtle btn--sm grow" type="button" data-act="export">${T('exportJson')}</button>
+    </div>
+  </aside>`;
+}
+
+/* ── centre panel ─────────────────────────────────────────────── */
+const stepLabel = v => v < 60 ? v + ' ' + T('unitMin') : T('hour1');
+
+function viewMain(){
+  const s = cur(), live = isActiveNow(s), total = Math.round(patternMinutes(s));
+  const pct = (total / (patLen(s) * DAY_MIN) * 100).toFixed(0);
+  const cov = isWeek(s) ? T('coverage', { d:dur(total), pct })
+    : T('coverageCycle', { d:dur(total), n:patLen(s), pct, wk:dur(Math.round(total / patLen(s) * 7)) });
+  return `<main class="main"><div class="editor">
+
+    <div class="row wrap">
+      <input class="inp" data-fk="name" data-act="rename" value="${esc(schedName(s))}" aria-label="${T('nameAria')}" style="width:236px;flex:none">
+      <span class="pill" title="${T('coverageTitle')}">${cov}</span>
+      <span class="pill ${live ? 'pill--live' : 'pill--idle'}">${live ? T('activeNow') : T('inactiveNow')}</span>
+      <span class="grow"></span>
+      <button class="btn btn--danger" type="button" data-act="del">${T('btnDelete')}</button>
+      <button class="btn" type="button" data-act="cancel" ${S.dirty ? '' : 'disabled'}>${T('btnCancel')}</button>
+      <button class="btn btn--primary" type="button" data-act="save" ${S.dirty ? '' : 'disabled'}>${T('btnSave')}</button>
+    </div>
+
+    ${viewPatBar()}
+
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="${T('toolAria')}">
+        <button type="button" data-act="tool" data-v="draw"  aria-pressed="${S.tool === 'draw'}">${T('draw')}</button>
+        <button type="button" data-act="tool" data-v="erase" aria-pressed="${S.tool === 'erase'}">${T('erase')}</button>
+      </div>
+      <div class="tbsep"></div>
+      <button class="btn btn--subtle btn--icon" type="button" data-act="undo" title="${T('undoTitle')}" ${S.undo.length ? '' : 'disabled'}>↶</button>
+      <button class="btn btn--subtle btn--icon" type="button" data-act="redo" title="${T('redoTitle')}" ${S.redo.length ? '' : 'disabled'}>↷</button>
+      <div class="tbsep"></div>
+      <span class="hint">${T('snap')}</span>
+      <div class="seg" role="group" aria-label="${T('snapAria')}">
+        ${[5,15,30,60].map(v => `<button type="button" data-act="step" data-v="${v}" aria-pressed="${S.step === v}">${stepLabel(v)}</button>`).join('')}
+      </div>
+      <div class="tbsep"></div>
+      <button class="btn btn--outline" type="button" data-act="tplMenu">${T('templates')}</button>
+      <button class="btn btn--outline" type="button" data-act="invert" title="${T('invertTitle')}">${T('invert')}</button>
+      <button class="btn btn--subtle" type="button" data-act="clearAll">${S.checked.size ? T('clearCheckedBtn') : T('clearAllBtn')}</button>
+      <span class="grow"></span>
+      <span class="hint">${S.checked.size ? T('scopeHint', { n:S.checked.size }) : T('scopeHintNone')}</span>
+    </div>
+
+    ${viewGrid()}
+
+    <p class="hint" style="margin:0">${T('gridHint', { step:stepLabel(S.step) })}</p>
+
+    ${viewSelBar()}
+    ${viewCalendar()}
+    ${viewUsedIn()}
+    ${viewExceptions()}
+    ${viewAdvanced()}
+    ${viewApi()}
+  </div></main>`;
+}
+
+/** Pattern type, cycle length / anchor and crew controls. */
+function viewPatBar(){
+  const s = cur(), week = isWeek(s);
+  return `<div class="patbar">
+    <div class="seg" role="group" aria-label="${T('patKindAria')}">
+      <button type="button" data-act="kind" data-v="week"  aria-pressed="${week}">${T('patWeek')}</button>
+      <button type="button" data-act="kind" data-v="cycle" aria-pressed="${!week}">${T('patCycle')}</button>
+    </div>
+    ${week ? `<span class="hint">${T('weekHint')}</span>` : `
+      <label class="patfld"><span class="lbl">${T('cycleLen')}</span>
+        <span class="row" style="gap:4px">
+          <input class="inp inp--sm" style="width:58px" type="number" min="2" max="${MAX_CYCLE}"
+            data-act="cycLen" data-fk="cycLen" value="${patLen(s)}">
+          <span class="hint">${T('unitDays')}</span></span></label>
+      <label class="patfld" title="${T('cycleAnchorTitle')}"><span class="lbl">${T('cycleAnchor')}</span>
+        <input class="inp inp--sm" type="date" data-act="cycAnchor" data-fk="cycAnchor" value="${s.pattern.anchor}"></label>
+      <div class="tbsep"></div>
+      <label class="patfld" title="${T('crewsTitle')}"><span class="lbl">${T('crews')}</span>
+        <input class="inp inp--sm" style="width:52px" type="number" min="1" max="8"
+          data-act="crewCount" data-fk="crewCount" value="${s.crewCount}"></label>
+      <label class="patfld" title="${T('crewStepTitle')}"><span class="lbl">${T('crewStep')}</span>
+        <input class="inp inp--sm" style="width:52px" type="number" min="0" max="${patLen(s) - 1}"
+          data-act="crewStep" data-fk="crewStep" value="${s.crewStep}" ${s.crewCount > 1 ? '' : 'disabled'}></label>
+      ${s.crewCount > 1 ? `<label class="patfld"><span class="lbl">${T('crewShow')}</span>
+        <select class="inp inp--sm" data-act="crew">
+          ${Array.from({ length:s.crewCount }, (_, k) => `<option value="${k}" ${S.crewView === k ? 'selected' : ''}>${T('crewN', { n:k + 1 })}</option>`).join('')}
+        </select></label>` : ''}
+      <span class="hint grow">${T('cycleHint', { n:patLen(s) })}</span>`}
+  </div>`;
+}
+
+function viewGrid(){
+  const s = cur(), tnow = nowMin(), today = todayISO();
+  const todayRow = rowIndexFor(s, today);
+  const body = patRows(s).map((list, i) => {
+    const checked = S.checked.has(i), dim = S.checked.size > 0 && !checked;
+    const covered = coveredOnRow(s, i);
+    const blocks = list.map(r => blockHtml(i, r, false)).join('');
+    const cont = (patRows(s)[prevRow(s, i)] || []).filter(r => r.start + r.len > DAY_MIN)
+      .map(r => blockHtml(prevRow(s, i), r, true)).join('');
+    const isToday = i === todayRow;
+    const nd = isWeek(s) ? null : nextDateForRow(s, i);
+    return `<div class="drow ${dim ? 'drow--dim' : ''} ${isToday ? 'drow--today' : ''} ${S.focusRow === i && !S.checked.size ? 'drow--focus' : ''}">
+      <div class="dchk"><input type="checkbox" data-act="check" data-i="${i}" ${checked ? 'checked' : ''}
+        aria-label="${T('selectRowAria', { row:rowLabel(s, i) })}"></div>
+      <div class="dday" data-act="focusRow" data-i="${i}">
+        <span class="dday__n">${rowLabel(s, i)}${isToday ? ` <span class="subtle" style="font-size:var(--fs-cap)">&nbsp;${T('today')}</span>` : ''}</span>
+        ${nd ? `<span class="dday__d">${T('nextOn', { d:fmtDateShort(nd) })}</span>` : ''}
+      </div>
+      <div class="dsum" title="${T('coveredTitle')}">${covered ? dur(covered) : '—'}</div>
+      <div class="track ${S.tool === 'erase' ? 'track--erase' : ''}" data-track="${i}" role="group"
+        aria-label="${T('timelineAria', { row:rowLabel(s, i) })}">
+        ${cont}${blocks}
+        ${isToday ? `<div class="nowline" style="left:${(tnow / DAY_MIN * 100).toFixed(3)}%" title="${T('nowTitle', { t:fmt(tnow, S.use12) })}"></div>` : ''}
+      </div>
+      <div class="dmenu"><button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="rowMenu" data-i="${i}"
+        aria-label="${T('rowActionsAria', { row:rowLabel(s, i) })}">⋯</button></div>
+    </div>`;
+  }).join('');
+  return `<div class="grid ${patLen(s) > 10 ? 'grid--tall' : ''}">
+    <div class="ruler">
+      <div class="ruler__pad">${T('rulerPad')}</div>
+      <div class="ruler__cells">${Array.from({length:24}, (_, h) => `<span>${h % 2 === 0 ? p2(h) : ''}</span>`).join('')}</div>
+      <div class="ruler__end"></div>
+    </div>
+    <div class="grid__rows">${body}</div>
+  </div>`;
+}
+
+function blockHtml(owner, r, isCont){
+  const s = cur();
+  const from = isCont ? 0 : r.start;
+  const to   = isCont ? r.start + r.len - DAY_MIN : Math.min(r.start + r.len, DAY_MIN);
+  const w = (to - from) / DAY_MIN * 100, l = from / DAY_MIN * 100;
+  const sel = !isCont && S.sel && S.sel.row === owner && S.sel.id === r.id;
+  const full = `${fmt(r.start, S.use12)} – ${fmtEnd(r.start + r.len, S.use12)}` + (r.cyc ? T('cycTitle', r.cyc) : '');
+  const mark = r.cyc ? ' ↻' : '';
+  const text = w < 4.5 ? '' : (w < 11 ? fmt(r.start, S.use12) + mark
+    : `${fmt(r.start, S.use12)} – ${fmtEnd(r.start + r.len, S.use12)}${r.cyc && w > 24 ? T('cycBlk', r.cyc) : mark}`);
+  const cls = ['blk', r.cyc ? 'blk--cyc' : '', isCont ? 'blk--cont' : '', sel ? 'blk--sel' : ''].filter(Boolean).join(' ');
+  return `<div class="${cls}" style="left:${l.toFixed(3)}%;width:${Math.max(w, .6).toFixed(3)}%"
+      data-blk="${r.id}" data-owner="${owner}" data-cont="${isCont ? 1 : 0}"
+      title="${esc(isCont ? full + T('continuesFrom', { row:rowLabel(s, owner) }) : full)}">
+    ${isCont ? '' : '<span class="blk__h blk__h--l" data-h="l"></span>'}
+    <span style="pointer-events:none">${isCont ? '↳ ' : ''}${text}</span>
+    ${isCont ? '' : '<span class="blk__h blk__h--r" data-h="r"></span>'}
+  </div>`;
+}
+
+function viewSelBar(){
+  const s = cur();
+  if(S.checked.size > 0){
+    const listed = Array.from(S.checked).sort((a, b) => a - b).map(i => rowLabel(s, i));
+    return `<div class="selbar selbar--multi">
+      <b>${T('rowsChecked', { n:S.checked.size })}</b>
+      <span class="hint">${T('scopeNote', { list:listed.slice(0, 8).join(', ') + (listed.length > 8 ? '…' : '') })}</span>
+      <span class="grow"></span>
+      <button class="btn btn--outline btn--sm" type="button" data-act="copyFrom">${T('copyFromRow')}</button>
+      <button class="btn btn--outline btn--sm" type="button" data-act="clearChecked">${T('clearChecked')}</button>
+      <button class="btn btn--subtle btn--sm" type="button" data-act="uncheckAll">${T('uncheckAll')}</button>
+    </div>`;
+  }
+  const sel = S.sel && (rows()[S.sel.row] || []).find(r => r.id === S.sel.id);
+  if(!sel) return `<div class="selbar"><span class="hint">${T('selHint')}</span></div>`;
+  return `<div class="selbar">
+    <b style="min-width:78px">${rowLabel(s, S.sel.row)}</b>
+    <label class="hint">${T('from')} <input class="inp inp--time inp--sm" type="time" data-fk="selFrom" data-act="selFrom" value="${hm(sel.start)}" step="300"></label>
+    <label class="hint">${T('to')} <input class="inp inp--time inp--sm" type="time" data-fk="selTo" data-act="selTo" value="${hm((sel.start + sel.len) % DAY_MIN)}" step="300"></label>
+    <span class="hint">${T('duration')} <b>${dur(sel.len)}</b>${sel.start + sel.len > DAY_MIN ? T('crossesMidnight') : ''}</span>
+    <label class="hint row" style="gap:5px"><input type="checkbox" data-act="selCyc" ${sel.cyc ? 'checked' : ''}> ${T('cyclic')}</label>
+    ${sel.cyc ? `<span class="hint">${T('cycOnLbl')} <input class="inp inp--sm" data-fk="cycOn" data-act="cycOn" type="number" min="1" max="1440" value="${sel.cyc.on}" style="width:56px"> ${T('cycEveryLbl')}
+      <input class="inp inp--sm" data-fk="cycEvery" data-act="cycEvery" type="number" min="1" max="1440" value="${sel.cyc.every}" style="width:56px"> ${T('minSuffix')}</span>` : ''}
+    <span class="grow"></span>
+    <button class="btn btn--outline btn--sm" type="button" data-act="copyIv">${T('copyIntervalTo')}</button>
+    <button class="btn btn--outline btn--sm" type="button" data-act="delIv">${T('deleteInterval')}</button>
+  </div>`;
+}
+
+/* ── accordions ───────────────────────────────────────────────── */
+function acc(key, title, meta, body){
+  return `<div class="acc" data-open="${S.panels[key]}">
+    <button class="acc__sum" type="button" data-act="panel" data-k="${key}" aria-expanded="${S.panels[key]}">
+      <span class="caret">▶</span><span>${title}</span><span class="hint" style="font-weight:400">${meta}</span>
+    </button>
+    <div class="acc__body">${body}</div>
+  </div>`;
+}
+
+/* ── calendar: the resolved result, verifiable by eye ─────────── */
+function viewCalendar(){
+  const s = cur(), y = S.cal.y, m = S.cal.m;
+  const first = new Date(y, m, 1), last = new Date(y, m + 1, 0).getDate();
+  const lead = dowIdx(first);
+  const total = monthMinutes(s, y, m);
+  const cells = [];
+  for(let k = 0; k < lead; k++) cells.push('<div class="cal__cell cal__cell--pad"></div>');
+  for(let d = 1; d <= last; d++){
+    const dISO = iso(new Date(y, m, d));
+    const eff = effectiveOn(s, dISO);
+    const cov = coveredOnDate(s, dISO);
+    const g = stripDate(s, dISO);
+    const badge = eff.rule === 'exception' ? 'E' : eff.rule === 'holiday' ? 'H' : eff.rule === 'outside' ? '—' : '';
+    const isToday = dISO === todayISO();
+    cells.push(`<div class="cal__cell cal__cell--${eff.rule} ${isToday ? 'cal__cell--today' : ''} ${S.calSel === dISO ? 'cal__cell--sel' : ''}"
+      data-act="calPick" data-d="${dISO}" title="${esc(fmtDate(dISO))} · ${esc(ruleText(s, eff))} · ${esc(dur(cov))}">
+      <div class="cal__top"><span class="cal__n">${d}</span>${badge ? `<span class="cal__b">${badge}</span>` : ''}</div>
+      <div class="cal__strip" style="${g ? 'background-image:' + g : ''}"></div>
+      <div class="cal__h">${cov ? dur(cov) : ''}</div>
+    </div>`);
+  }
+  const selNote = S.calSel ? (() => {
+    const eff = effectiveOn(s, S.calSel);
+    return `<div class="cal__sel">
+      <b>${T('calSelected', { date:fmtDate(S.calSel), rule:ruleText(s, eff), d:dur(coveredOnDate(s, S.calSel)) })}</b>
+      <span class="grow"></span>
+      ${eff.rule === 'base' ? `<button class="btn btn--outline btn--sm" type="button" data-act="calRow" data-i="${eff.row}">${T('calGoRow')}</button>` : ''}
+      <button class="btn btn--primary btn--sm" type="button" data-act="calExc" data-d="${S.calSel}">${T('calAddExc')}</button>
+    </div>`;
+  })() : '';
+  const body = `<p class="hint" style="margin:8px 0">${T('calNote')}</p>
+    <div class="cal">
+      <div class="cal__head">
+        <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="calPrev" aria-label="${T('prevMonth')}">‹</button>
+        <b>${monthTitle(y, m)}</b>
+        <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="calNext" aria-label="${T('nextMonth')}">›</button>
+        <button class="btn btn--subtle btn--sm" type="button" data-act="calToday">${T('thisMonth')}</button>
+        <span class="grow"></span>
+        <span class="pill">${T('monthTotal', { d:dur(total) })}</span>
+      </div>
+      <div class="cal__dow">${DAYS.map(d => `<span>${dayShort(d)}</span>`).join('')}</div>
+      <div class="cal__grid">${cells.join('')}</div>
+      ${selNote}
+      <div class="cal__legend"><span class="hint">${T('legend')}:</span>
+        <span class="lg lg--base"></span><span class="hint">${T('legendBase')}</span>
+        <span class="lg lg--exception"></span><span class="hint">${T('legendExc')}</span>
+        <span class="lg lg--holiday"></span><span class="hint">${T('legendHol')}</span>
+        <span class="lg lg--outside"></span><span class="hint">${T('legendOut')}</span>
+      </div>
+    </div>`;
+  return acc('calendar', T('calTitle'), T('calMeta', { month:monthTitle(y, m), d:dur(total) }), body);
+}
+function ruleText(s, eff){
+  if(eff.rule === 'exception') return T('calRuleExc', { note:excNote(eff.src) });
+  if(eff.rule === 'holiday')   return T('calRuleHol');
+  if(eff.rule === 'outside')   return T('calRuleOut');
+  return T('calRuleBase', { row:rowLabel(s, eff.row) });
+}
+
+function viewUsedIn(){
+  const u = cur().usedIn || {}, n = usageCount(cur());
+  const groups = [
+    ['grpArchive', u.archive], ['grpRoles', u.roles], ['grpMacros', u.macros],
+    ['grpExport', u.exportTasks], ['grpRepl', u.replication]
+  ];
+  const body = `<div class="grpgrid" style="margin-top:8px">${groups.map(([key, items]) => `
+    <div class="grp"><h4>${T(key)} · ${(items || []).length}</h4>
+      ${(items || []).length ? `<div class="row wrap" style="gap:5px">${items.map(i => `<span class="chip">${esc(T(i))}</span>`).join('')}</div>`
+        : `<span class="hint">${T('notUsed')}</span>`}
+    </div>`).join('')}</div>
+  <p class="hint" style="margin:10px 0 0">${T('usedInNote')}</p>`;
+  return acc('usedIn', T('usedIn'), T('placesN', { n }), body);
+}
+
+/* ── exceptions: cards, many intervals, weekday filter, overlaps ─ */
+function viewExceptions(){
+  const s = cur(), ov = overlapMap(s);
+  const modes = ['none','full','sameAs','custom','sched'];
+  const cards = s.exceptions.map(e => {
+    const warn = ov[e.id];
+    const details = e.mode === 'sameAs'
+      ? `<label class="patfld"><span class="lbl">${T('sameAsRowLbl')}</span>
+          <select class="inp inp--sm" data-act="exRow" data-id="${e.id}">
+            ${patRows(s).map((_, i) => `<option value="${i}" ${e.sameAsRow === i ? 'selected' : ''}>${rowLabel(s, i)}</option>`).join('')}
+          </select></label>`
+      : e.mode === 'sched'
+      ? `<label class="patfld"><span class="lbl">${T('sameAsSchedLbl')}</span>
+          <select class="inp inp--sm" data-act="exSched" data-id="${e.id}">
+            <option value="">—</option>
+            ${S.order.filter(id => id !== s.id).map(id => `<option value="${id}" ${e.schedId === id ? 'selected' : ''}>${esc(schedName(S.items[id]))}</option>`).join('')}
+          </select></label>`
+      : e.mode === 'custom'
+      ? `<div class="exiv"><span class="lbl">${T('excIntervals')}</span>
+          <div class="row wrap" style="gap:5px">
+            ${(e.iv || []).map(r => `<span class="exiv__row">
+              <input class="inp inp--time inp--sm" type="time" step="300" data-act="exIvFrom" data-id="${e.id}" data-iv="${r.id}" data-fk="xf${r.id}" value="${hm(r.start)}">
+              <span class="subtle">–</span>
+              <input class="inp inp--time inp--sm" type="time" step="300" data-act="exIvTo" data-id="${e.id}" data-iv="${r.id}" data-fk="xt${r.id}" value="${hm((r.start + r.len) % DAY_MIN)}">
+              <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="exIvDel" data-id="${e.id}" data-iv="${r.id}" aria-label="${T('delExcIv')}">✕</button>
+            </span>`).join('')}
+            <button class="btn btn--outline btn--sm" type="button" data-act="exIvAdd" data-id="${e.id}">${T('addExcIv')}</button>
+          </div></div>`
+      : '';
+    return `<div class="exc ${warn ? 'exc--warn' : ''}">
+      <div class="exc__hd">
+        ${warn ? `<span class="exc__warn" title="${T('overlapWarn', { n:warn })}">⚠</span>` : ''}
+        <label class="patfld"><span class="lbl">${T('excFrom')}</span>
+          <input class="inp inp--sm" type="date" data-act="exFrom" data-id="${e.id}" data-fk="exF${e.id}" value="${e.from}"></label>
+        <label class="patfld"><span class="lbl">${T('excTo')}</span>
+          <input class="inp inp--sm" type="date" data-act="exTo" data-id="${e.id}" data-fk="exT${e.id}" value="${e.to}"></label>
+        <label class="patfld"><span class="lbl">${T('excModeLbl')}</span>
+          <select class="inp inp--sm" data-act="exMode" data-id="${e.id}">
+            ${modes.map(v => `<option value="${v}" ${e.mode === v ? 'selected' : ''}>${T('excMode_' + v)}</option>`).join('')}
+          </select></label>
+        <label class="daychk"><input type="checkbox" data-act="exYear" data-id="${e.id}" ${e.yearly ? 'checked' : ''}> ${T('yearly')}</label>
+        <span class="grow"></span>
+        <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="exDup" data-id="${e.id}" aria-label="${T('dupExc')}" title="${T('dupExc')}">⧉</button>
+        <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="exDel" data-id="${e.id}" aria-label="${T('removeExc')}">✕</button>
+      </div>
+      <div class="exc__bd">
+        <div class="exdow"><span class="lbl">${T('excDows')}</span>
+          <div class="row wrap" style="gap:4px">
+            ${DAYS.map(d => `<button class="tog" type="button" data-act="exDow" data-id="${e.id}" data-d="${d}"
+              aria-pressed="${(e.dows || []).includes(d)}">${dayShort(d)}</button>`).join('')}
+            ${(e.dows || []).length ? '' : `<span class="hint">${T('excDowsAll')}</span>`}
+          </div></div>
+        ${details}
+        <label class="patfld grow"><span class="lbl">${T('commentPh')}</span>
+          <input class="inp inp--sm" data-act="exNote" data-id="${e.id}" data-fk="exN${e.id}" value="${esc(excNote(e))}" placeholder="${T('commentPh')}"></label>
+      </div>
+    </div>`;
+  }).join('');
+  const holChips = S.holidays.slice().sort().map(h => `<span class="chip">${fmtDateShort(h)}
+    <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="holDel" data-d="${h}" aria-label="${T('holRemove')}">✕</button></span>`).join('');
+  const body = `<p class="hint" style="margin:8px 0">${T('excNote')}</p>
+    ${cards || `<p class="hint" style="margin:0 0 8px">${T('noExc')}</p>`}
+    <div class="row" style="margin-top:9px">
+      <button class="btn btn--outline btn--sm" type="button" data-act="exAdd">${T('addException')}</button>
+      <button class="btn btn--subtle btn--sm" type="button" data-act="exClear" ${s.exceptions.length ? '' : 'disabled'}>${T('clearAllExc')}</button>
+    </div>
+    <hr class="sep" style="margin:12px 0">
+    <div class="grp">
+      <h4>${T('holTitle')}</h4>
+      <div class="row wrap" style="gap:8px">
+        <label class="daychk"><input type="checkbox" data-act="holApply" ${s.useHolidayList ? 'checked' : ''}> ${T('holApply')}</label>
+        <label class="patfld"><span class="lbl">${T('holMode')}</span>
+          <select class="inp inp--sm" data-act="holMode" ${s.useHolidayList ? '' : 'disabled'}>
+            ${['none','full','sameAs'].map(v => `<option value="${v}" ${s.holidayMode === v ? 'selected' : ''}>${T('excMode_' + v)}</option>`).join('')}
+          </select></label>
+        ${s.holidayMode === 'sameAs' ? `<label class="patfld"><span class="lbl">${T('sameAsRowLbl')}</span>
+          <select class="inp inp--sm" data-act="holRow">
+            ${patRows(s).map((_, i) => `<option value="${i}" ${s.holidaySameAsRow === i ? 'selected' : ''}>${rowLabel(s, i)}</option>`).join('')}
+          </select></label>` : ''}
+      </div>
+      <div class="row wrap" style="gap:5px;margin-top:8px">
+        ${holChips || `<span class="hint">${T('holEmpty')}</span>`}
+        <input class="inp inp--sm" style="width:150px" type="date" data-act="holAdd" data-fk="holAdd" value="">
+      </div>
+      <p class="hint" style="margin:7px 0 0">${T('holNote')}</p>
+    </div>`;
+  return acc('exceptions', T('excTitle'),
+    T('rulesN', { n:s.exceptions.length }) + (s.useHolidayList ? T('plusHolidayList') : ''), body);
+}
+
+function viewAdvanced(){
+  const s = cur();
+  const body = `<div class="grpgrid" style="margin-top:8px">
+    <div class="grp"><h4>${T('validityPeriod')}</h4>
+      <div class="row" style="gap:6px">
+        <label class="grow"><span class="lbl">${T('validFrom')}</span><input class="inp inp--sm" type="date" data-act="vFrom" data-fk="vFrom" value="${s.validFrom}"></label>
+        <label class="grow"><span class="lbl">${T('validTo')}</span><input class="inp inp--sm" type="date" data-act="vTo" data-fk="vTo" value="${s.validTo}"></label>
+      </div>
+      <p class="hint" style="margin:6px 0 0">${T('validityNote')}</p>
+    </div>
+    <div class="grp"><h4>${T('referenceTime')}</h4>
+      <p class="hint" style="margin:0">${T('referenceNote')}</p>
+    </div>
+    <div class="grp"><h4>${T('audit')}</h4>
+      <p class="hint" style="margin:0">${T('lastModified')}: ${esc(s.modified === '@now' ? T('justNowYou') : s.modified)}<br>${T('identifier')}: <code>${s.id}</code></p>
+    </div>
+  </div>`;
+  return acc('advanced', T('advTitle'), s.validFrom || s.validTo ? T('configured') : T('defaults'), body);
+}
+
+/** The whole schedule, not just the weekly grid (defect #1). */
+function buildPayload(s){
+  const ivOut = (r, rowIdx) => Object.assign({
+    start: isWeek(s)
+      ? { day_of_week:DAY_ISO[DAYS[rowIdx]], hour:Math.floor(r.start / 60), minute:r.start % 60, second:0 }
+      : { day_of_cycle:rowIdx + 1, hour:Math.floor(r.start / 60), minute:r.start % 60, second:0 },
+    length_seconds:r.len * 60,
+    period_seconds:r.cyc ? r.cyc.every * 60 : patLen(s) * 86400
+  }, r.cyc ? { pulse_seconds:r.cyc.on * 60 } : {});
+  const added = [];
+  patRows(s).forEach((row, i) => row.forEach(r => added.push(ivOut(r, i))));
+  return { modify_intervals:[{
+    id:s.id,
+    pattern:Object.assign({ kind:s.pattern.kind, length_days:patLen(s) },
+      isWeek(s) ? {} : { anchor_date:s.pattern.anchor }),
+    crews:isWeek(s) || s.crewCount < 2 ? []
+      : Array.from({ length:s.crewCount }, (_, k) => ({ index:k + 1, offset_days:k * s.crewStep })),
+    valid_from:s.validFrom || null, valid_to:s.validTo || null,
+    holiday_list:{ enabled:!!s.useHolidayList, mode:s.holidayMode,
+      same_as_day:s.holidayMode === 'sameAs' ? s.holidaySameAsRow + 1 : null },
+    added_intervals:added, modified_intervals:[], removed_intervals:[],
+    exceptions:s.exceptions.map(e => ({
+      from:e.from || null, to:e.to || e.from || null, yearly:!!e.yearly,
+      weekdays:(e.dows || []).map(d => DAY_ISO[d]),
+      mode:e.mode,
+      same_as_day:e.mode === 'sameAs' ? e.sameAsRow + 1 : null,
+      same_as_schedule:e.mode === 'sched' ? (e.schedId || null) : null,
+      intervals:e.mode === 'custom' ? (e.iv || []).map(r => ({
+        start:{ hour:Math.floor(r.start / 60), minute:r.start % 60, second:0 },
+        length_seconds:r.len * 60
+      })) : [],
+      comment:excNote(e) || null
+    }))
+  }] };
+}
+function viewApi(){
+  const s = cur(), payload = buildPayload(s);
+  const n = payload.modify_intervals[0].added_intervals.length;
+  const body = `<p class="hint" style="margin:8px 0">${T('apiNote')}</p>
+    <pre class="json">${esc(JSON.stringify(payload, null, 2))}</pre>`;
+  return acc('api', T('apiTitle'), T('intervalsN', { n }), body);
+}
+
+/* ── right panel: row inspector ───────────────────────────────── */
+function viewInsp(){
+  const s = cur(), i = S.focusRow;
+  const list = (rows()[i] || []).slice().sort((a, b) => a.start - b.start);
+  const covered = coveredOnRow(s, i);
+  const own = list.reduce((n, r) => n + activeMinutes(r, r.len), 0);
+  const ivRows = list.map(r => `<div class="ivrow">
+      <input class="inp inp--time inp--sm" type="time" step="300" data-fk="f${r.id}" data-act="ivFrom" data-id="${r.id}" value="${hm(r.start)}" aria-label="${T('startAria')}">
+      <span class="subtle">–</span>
+      <input class="inp inp--time inp--sm" type="time" step="300" data-fk="t${r.id}" data-act="ivTo" data-id="${r.id}" value="${hm((r.start + r.len) % DAY_MIN)}" aria-label="${T('endAria')}">
+      <span class="ivrow__dur">${dur(r.len)}</span>
+      <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="ivCyc" data-id="${r.id}"
+        title="${r.cyc ? T('cycOnTitle', r.cyc) : T('cycOffTitle')}"
+        style="${r.cyc ? 'color:var(--accent)' : ''}">↻</button>
+      <button class="btn btn--subtle btn--sm btn--icon" type="button" data-act="ivDel" data-id="${r.id}" aria-label="${T('delIntervalAria')}">🗑</button>
+    </div>${r.start + r.len > DAY_MIN ? `<div class="hint" style="margin:-3px 0 2px 4px">${T('continuesTo', { t:fmt(r.start + r.len, S.use12), row:rowLabel(s, nextRow(s, i)) })}</div>` : ''}`).join('');
+  const carry = (rows()[prevRow(s, i)] || []).filter(r => r.start + r.len > DAY_MIN);
+  const others = patRows(s).map((_, k) => k).filter(k => k !== i);
+  return `<aside class="insp" style="width:${S.inspW}px">
+    <div class="insp__scroll">
+    <div class="insp__head">
+      <div class="insp__title">${rowLabel(s, i)}</div>
+      <div class="hint">${T('inspMeta', { n:list.length, own:dur(Math.round(own)), cov:covered ? dur(covered) : T('zeroMin') })}</div>
+      ${carry.length ? `<div class="hint">${T('plusCarryOver', { row:rowLabel(s, prevRow(s, i)) })}</div>` : ''}
+    </div>
+
+    <div class="insp__sec">
+      <span class="lbl">${T('quickFill')}</span>
+      <div class="row wrap" style="gap:5px">
+        <button class="btn btn--outline btn--sm" type="button" data-act="qAll">${T('allDay')}</button>
+        <button class="btn btn--outline btn--sm" type="button" data-act="qBiz">09:00–18:00</button>
+        <button class="btn btn--outline btn--sm" type="button" data-act="qNight">22:00–06:00</button>
+        <button class="btn btn--outline btn--sm" type="button" data-act="qInv">${T('invertDay')}</button>
+        <button class="btn btn--subtle btn--sm" type="button" data-act="qClear">${T('clear')}</button>
+      </div>
+    </div>
+
+    <div class="insp__sec">
+      <span class="lbl">${T('intervals')}</span>
+      ${ivRows || `<span class="hint">${T('noIntervals')}</span>`}
+      <button class="btn btn--outline btn--sm" type="button" data-act="ivAdd">${T('addInterval')}</button>
+    </div>
+
+    <div class="insp__sec">
+      <span class="lbl">${T('copyRowTo', { row:rowLabel(s, i) })}</span>
+      <div class="${isWeek(s) ? 'daychips' : 'rowchips'}">
+        ${others.map(k => `<label class="daychk"><input type="checkbox" data-act="cpTgt" data-i="${k}" ${S.cpTargets.has(k) ? 'checked' : ''}> ${isWeek(s) ? rowLabel(s, k) : rowShort(s, k)}</label>`).join('')}
+      </div>
+      <div class="row wrap" style="gap:5px">
+        <button class="btn btn--sm" type="button" data-act="cpAll">${T('selectAll')}</button>
+        ${isWeek(s) ? `<button class="btn btn--sm" type="button" data-act="cpWorkdays">${T('monFri')}</button>` : ''}
+        <span class="grow"></span>
+        <button class="btn btn--outline btn--sm" type="button" data-act="cpMerge">${T('merge')}</button>
+        <button class="btn btn--primary btn--sm" type="button" data-act="cpReplace">${T('replace')}</button>
+      </div>
+      <p class="hint" style="margin:0">${T('copyModeNote')}</p>
+    </div>
+    </div>
+    ${viewStatus()}
+  </aside>`;
+}
+
+function viewStatus(){
+  const m = statusMsg(), c = clockParts();
+  return `<div class="statusbar">
+    <div class="statusbar__msg" data-kind="${m ? m.kind : 'none'}" role="status"
+      aria-live="polite" aria-label="${T('statusAria')}">${m ? esc(m.text) : ''}</div>
+    <div class="statusbar__clock" title="${T('clockTitle')}">
+      <span class="statusbar__day" data-clk="day">${c.day}</span>
+      <span class="statusbar__time" data-clk="time">${c.time}</span>
+    </div>
+  </div>`;
+}
+
+/* ── popovers & modal ─────────────────────────────────────────── */
+function viewPop(){
+  const p = S.pop; if(!p) return '';
+  const s = cur();
+  const at = `left:${p.x}px;top:${p.y}px`;
+  if(p.kind === 'tpl'){
+    const item = t => `<button class="pop__item" type="button" data-act="tplPick" data-v="${t.id}">
+        <span class="pop__bar" style="background-image:${strip(t.kind === 'cycle' ? (t.rows()[0] || []) : t.iv)}"></span>
+        <span class="grow"><b>${tplLabel(t)}</b><br><span class="hint">${tplNote(t)}</span></span></button>`;
+    return `<div class="scrim" data-act="closePop"></div><div class="pop pop--tall" style="${at};min-width:300px">
+      <div class="pop__cap">${T('tplWeekCap')}</div>
+      ${TEMPLATES.filter(t => t.kind === 'week').map(item).join('')}
+      <div class="pop__cap">${T('tplCycleCap')}</div>
+      ${TEMPLATES.filter(t => t.kind === 'cycle').map(item).join('')}
+    </div>`;
+  }
+  if(p.kind === 'row'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at}">
+      <div class="pop__cap">${rowLabel(s, p.i)}</div>
+      <button class="pop__item" type="button" data-act="rmFill"  data-i="${p.i}">${T('fill24')}</button>
+      <button class="pop__item" type="button" data-act="rmInv"   data-i="${p.i}">${T('invertDay')}</button>
+      <button class="pop__item" type="button" data-act="rmFocus" data-i="${p.i}">${T('openInInspector')}</button>
+      <hr class="sep" style="margin:4px 0">
+      <button class="pop__item pop__item--danger" type="button" data-act="rmClear" data-i="${p.i}">${T('clearRow')}</button>
+    </div>`;
+  }
+  if(p.kind === 'sched'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop" style="${at}">
+      <button class="pop__item" type="button" data-act="smDup" data-id="${p.id}">${T('duplicate')}</button>
+      <button class="pop__item" type="button" data-act="smExport" data-id="${p.id}">${T('exportThis')}</button>
+      <hr class="sep" style="margin:4px 0">
+      <button class="pop__item pop__item--danger" type="button" data-act="smDel" data-id="${p.id}">${T('deleteEllipsis')}</button>
+    </div>`;
+  }
+  if(p.kind === 'copyFrom'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop pop--tall" style="${at}">
+      <div class="pop__cap">${T('copyFrom')}</div>
+      ${patRows(s).map((row, i) => `<button class="pop__item" type="button" data-act="cfPick" data-i="${i}">
+        ${rowLabel(s, i)} <span class="hint">(${row.length})</span></button>`).join('')}
+    </div>`;
+  }
+  if(p.kind === 'copyIv'){
+    return `<div class="scrim" data-act="closePop"></div><div class="pop pop--tall" style="${at}">
+      <div class="pop__cap">${T('copyThisIntervalTo')}</div>
+      ${patRows(s).map((_, i) => i).filter(i => !S.sel || i !== S.sel.row)
+        .map(i => `<button class="pop__item" type="button" data-act="ciPick" data-i="${i}">${rowLabel(s, i)}</button>`).join('')}
+      <hr class="sep" style="margin:4px 0">
+      <button class="pop__item" type="button" data-act="ciAll">${T('allOtherRows')}</button>
+    </div>`;
+  }
+  return '';
+}
+function viewModal(){
+  const m = S.modal; if(!m) return '';
+  return `<div class="modal" role="alertdialog" aria-modal="true" aria-label="${esc(m.title)}">
+    <div class="modal__box">
+      <div class="modal__t">${esc(m.title)}</div>
+      <div class="modal__c">${m.msg}</div>
+      <div class="modal__a">
+        <button class="btn" type="button" data-act="modalNo">${T('btnCancel')}</button>
+        <button class="btn btn--primary" type="button" data-act="modalYes">${esc(m.label)}</button>
+      </div>
+    </div></div>`;
+}
+
+/* ═══════════════ EVENTS ═══════════════════════════════════════ */
+const snapv = v => Math.round(v / S.step) * S.step;
+function popAt(el, kind, extra){
+  const r = el.getBoundingClientRect();
+  S.pop = Object.assign({ kind, x:Math.min(r.left, innerWidth - 330), y:Math.min(r.bottom + 4, innerHeight - 300) }, extra || {});
+  render();
+}
+const ivById = (i, id) => (rows()[i] || []).find(r => r.id === id);
+
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]'); if(!t) return;
+  const a = t.dataset.act, v = t.dataset.v, d = t.dataset.d, id = t.dataset.id;
+  const i = t.dataset.i === undefined ? null : +t.dataset.i;
+  const fr = () => S.focusRow;
+
+  switch(a){
+    /* chrome */
+    case 'theme': S.scheme = S.scheme === 'light' ? 'dark' : 'light'; render(); return;
+    case 'fmt': S.use12 = v === '12'; render(); return;
+
+    /* sidebar */
+    case 'pick':
+      if(S.dirty && id !== S.selectedId){
+        confirmThen(T('switchTitle'), T('switchMsg'), T('btnSwitch'),
+          () => { S.selectedId = id; S.sel = null; S.checked.clear(); S.focusRow = 0; S.cpTargets.clear(); S.crewView = 0; render(); });
+        return;
+      }
+      S.selectedId = id; S.sel = null; S.checked.clear(); S.focusRow = 0; S.cpTargets.clear(); S.crewView = 0; render(); return;
+    case 'add': addSchedule(); return;
+    case 'search': return;
+    case 'schedMenu': popAt(t, 'sched', { id }); return;
+    case 'smDup': S.pop = null; duplicateSchedule(id); return;
+    case 'smDel': S.pop = null; deleteSchedule(id); return;
+    case 'smExport': case 'export': S.pop = null; notify('info', T('exportToast')); render(); return;
+    case 'import': notify('info', T('importToast')); return;
+
+    /* header */
+    case 'del': deleteSchedule(S.selectedId); return;
+    case 'save': S.saved = snap(); S.dirty = false; cur().modified = '@now';
+      notify('success', T('savedToast'), MSG_MS_SAVE); render(); return;
+    case 'cancel': confirmThen(T('discardTitle'), T('discardMsg'), T('btnDiscard'),
+        () => { restore(S.saved); S.undo.length = 0; S.redo.length = 0; notify('info', T('discardedToast')); render(); }); return;
+
+    /* pattern type */
+    case 'kind':
+      if(v === (isWeek(cur()) ? 'week' : 'cycle')) return;
+      setKind(v, v === 'cycle' ? 4 : 7); return;
+
+    /* toolbar */
+    case 'tool': S.tool = v; render(); return;
+    case 'step': S.step = +v; render(); return;
+    case 'undo': doUndo(); return;
+    case 'redo': doRedo(); return;
+    case 'tplMenu': popAt(t, 'tpl'); return;
+    case 'tplPick': { const tpl = TEMPLATES.find(x => x.id === v); S.pop = null; applyTemplate(tpl); return; }
+    case 'invert': invertRows(); return;
+    case 'clearAll': clearPattern(); return;
+
+    /* grid */
+    case 'focusRow': S.focusRow = i; S.sel = null; render(); return;
+    case 'rowMenu': popAt(t, 'row', { i }); return;
+    case 'rmFill':  S.pop = null; edit(() => setRow(i, [{ id:nid(), start:0, len:DAY_MIN, cyc:null }])); return;
+    case 'rmClear': S.pop = null; edit(() => setRow(i, [])); return;
+    case 'rmInv':   S.pop = null; S.checked = new Set([i]); invertRows(); S.checked.clear(); render(); return;
+    case 'rmFocus': S.pop = null; S.focusRow = i; render(); return;
+    case 'closePop': S.pop = null; render(); return;
+
+    /* multi-row bar */
+    case 'copyFrom': popAt(t, 'copyFrom'); return;
+    case 'cfPick': { S.pop = null; copyRowTo(i, Array.from(S.checked), 'replace'); return; }
+    case 'clearChecked': edit(() => S.checked.forEach(k => setRow(k, []))); return;
+    case 'uncheckAll': S.checked.clear(); render(); return;
+
+    /* selected interval */
+    case 'delIv': if(S.sel) edit(() => { setRow(S.sel.row, (rows()[S.sel.row] || []).filter(r => r.id !== S.sel.id)); S.sel = null; }); return;
+    case 'copyIv': popAt(t, 'copyIv'); return;
+    case 'ciPick': case 'ciAll': {
+      const r = S.sel && ivById(S.sel.row, S.sel.id); if(!r){ S.pop = null; render(); return; }
+      const targets = a === 'ciAll' ? patRows(cur()).map((_, k) => k).filter(k => k !== S.sel.row) : [i];
+      S.pop = null;
+      edit(() => targets.forEach(k => setRow(k, (rows()[k] || []).concat([{ id:nid(), start:r.start, len:r.len, cyc:r.cyc ? {...r.cyc} : null }]))));
+      notify('success', T('ivCopied', { n:targets.length })); return;
+    }
+
+    /* calendar */
+    case 'calPrev': { const m = S.cal.m - 1; S.cal = m < 0 ? { y:S.cal.y - 1, m:11 } : { y:S.cal.y, m }; render(); return; }
+    case 'calNext': { const m = S.cal.m + 1; S.cal = m > 11 ? { y:S.cal.y + 1, m:0 } : { y:S.cal.y, m }; render(); return; }
+    case 'calToday': S.cal = { y:new Date().getFullYear(), m:new Date().getMonth() }; S.calSel = todayISO(); render(); return;
+    case 'calPick': S.calSel = S.calSel === d ? null : d; render(); return;
+    case 'calRow': S.focusRow = i; S.sel = null; render(); return;
+    case 'calExc': addException(d); return;
+
+    /* inspector quick fill */
+    case 'qAll':   edit(() => setRow(fr(), [{ id:nid(), start:0, len:DAY_MIN, cyc:null }])); return;
+    case 'qBiz':   edit(() => setRow(fr(), [{ id:nid(), start:540, len:540, cyc:null }])); return;
+    case 'qNight': edit(() => setRow(fr(), [{ id:nid(), start:1320, len:480, cyc:null }])); return;
+    case 'qClear': edit(() => setRow(fr(), [])); return;
+    case 'qInv':   S.checked = new Set([fr()]); invertRows(); S.checked.clear(); render(); return;
+    case 'ivAdd':  edit(() => { const r = { id:nid(), start:540, len:120, cyc:null };
+      setRow(fr(), (rows()[fr()] || []).concat([r])); S.sel = { row:fr(), id:r.id }; }); return;
+    case 'ivDel':  edit(() => setRow(fr(), (rows()[fr()] || []).filter(r => r.id !== id))); return;
+    case 'ivCyc':  edit(() => { const r = ivById(fr(), id); if(r) r.cyc = r.cyc ? null : { every:30, on:5 }; }); return;
+
+    /* copy-this-row */
+    case 'cpTgt': S.cpTargets.has(i) ? S.cpTargets.delete(i) : S.cpTargets.add(i); render(); return;
+    case 'cpAll': S.cpTargets = new Set(patRows(cur()).map((_, k) => k).filter(k => k !== fr())); render(); return;
+    case 'cpWorkdays': S.cpTargets = new Set([0,1,2,3,4].filter(k => k !== fr())); render(); return;
+    case 'cpMerge': case 'cpReplace': {
+      const tg = Array.from(S.cpTargets);
+      if(!tg.length){ notify('warning', T('checkTargetWarn')); return; }
+      copyRowTo(fr(), tg, a === 'cpMerge' ? 'merge' : 'replace'); S.cpTargets = new Set(); render(); return;
+    }
+
+    /* accordions & exceptions */
+    case 'panel': S.panels[t.dataset.k] = !S.panels[t.dataset.k]; render(); return;
+    case 'exAdd': addException(S.calSel); return;
+    case 'exDup': dupException(id); return;
+    case 'exDel': edit(() => cur().exceptions = cur().exceptions.filter(e => e.id !== id)); return;
+    case 'exClear': clearExceptions(); return;
+    case 'exDow': edit(() => {
+      const e = cur().exceptions.find(x => x.id === id); if(!e) return;
+      e.dows = e.dows || [];
+      e.dows = e.dows.includes(d) ? e.dows.filter(x => x !== d) : e.dows.concat([d]);
+    }); return;
+    case 'exIvAdd': edit(() => {
+      const e = cur().exceptions.find(x => x.id === id); if(!e) return;
+      e.iv = normalize((e.iv || []).concat([{ id:nid(), start:540, len:240, cyc:null }])).list;
+    }); return;
+    case 'exIvDel': edit(() => {
+      const e = cur().exceptions.find(x => x.id === id); if(!e) return;
+      e.iv = (e.iv || []).filter(r => r.id !== t.dataset.iv);
+    }); return;
+    case 'holDel': edit(() => S.holidays = S.holidays.filter(h => h !== d)); return;
+
+    /* modal */
+    case 'modalNo': S.modal = null; render(); return;
+    case 'modalYes': { const f = S.modal && S.modal.fn; S.modal = null; render(); if(f) f(); return; }
+  }
+});
+
+document.addEventListener('change', ev => {
+  const t = ev.target.closest('[data-act]'); if(!t) return;
+  const a = t.dataset.act, id = t.dataset.id, d = t.dataset.d, fr = S.focusRow;
+  const i = t.dataset.i === undefined ? null : +t.dataset.i;
+  switch(a){
+    case 'lang': S.lang = t.value; render(); return;
+    case 'check': t.checked ? S.checked.add(i) : S.checked.delete(i); S.sel = null; render(); return;
+
+    /* pattern */
+    case 'cycLen': setCycleLen(+t.value); return;
+    case 'cycAnchor': edit(() => cur().pattern.anchor = t.value || todayISO()); return;
+    case 'crewCount': edit(() => { const s = cur(); s.crewCount = Math.max(1, Math.min(+t.value || 1, 8));
+      if(s.crewCount > 1 && !s.crewStep) s.crewStep = Math.max(1, Math.floor(patLen(s) / s.crewCount));
+      S.crewView = Math.min(S.crewView, s.crewCount - 1); }); return;
+    case 'crewStep': edit(() => { const s = cur(); s.crewStep = Math.max(0, Math.min(+t.value || 0, patLen(s) - 1)); }); return;
+    case 'crew': S.crewView = +t.value; render(); return;
+
+    /* intervals */
+    case 'ivFrom': case 'ivTo': {
+      edit(() => {
+        const r = ivById(fr, id); if(!r) return;
+        if(a === 'ivFrom'){ const end = r.start + r.len; const st = Math.min(parseHM(t.value), DAY_MIN - S.step);
+          r.start = st; r.len = Math.max(S.step, end - st); }
+        else { let e = parseHM(t.value); if(e <= r.start) e += DAY_MIN; r.len = Math.max(S.step, e - r.start); }
+        setRow(fr, rows()[fr]);
+      }); return;
+    }
+    case 'selFrom': case 'selTo': {
+      if(!S.sel) return;
+      edit(() => {
+        const r = ivById(S.sel.row, S.sel.id); if(!r) return;
+        if(a === 'selFrom'){ const end = r.start + r.len; r.start = Math.min(parseHM(t.value), DAY_MIN - S.step); r.len = Math.max(S.step, end - r.start); }
+        else { let e = parseHM(t.value); if(e <= r.start) e += DAY_MIN; r.len = Math.max(S.step, e - r.start); }
+        setRow(S.sel.row, rows()[S.sel.row]);
+      }); return;
+    }
+    case 'selCyc': edit(() => { const r = ivById(S.sel.row, S.sel.id); if(r) r.cyc = t.checked ? { every:30, on:5 } : null; }); return;
+    case 'cycOn':    edit(() => { const r = ivById(S.sel.row, S.sel.id); if(r && r.cyc) r.cyc.on = Math.max(1, Math.min(+t.value || 1, r.cyc.every)); }); return;
+    case 'cycEvery': edit(() => { const r = ivById(S.sel.row, S.sel.id); if(r && r.cyc){ r.cyc.every = Math.max(1, +t.value || 1); r.cyc.on = Math.min(r.cyc.on, r.cyc.every); } }); return;
+
+    /* exceptions */
+    case 'exFrom': edit(() => { const e = cur().exceptions.find(x => x.id === id);
+      e.from = t.value; if(!e.to || e.to < e.from) e.to = e.from; sortEx(cur()); }); return;
+    case 'exTo':   edit(() => { const e = cur().exceptions.find(x => x.id === id);
+      e.to = t.value; if(e.from && e.to < e.from) e.from = e.to; sortEx(cur()); }); return;
+    case 'exMode': edit(() => { const e = cur().exceptions.find(x => x.id === id); e.mode = t.value;
+      if(e.mode === 'custom' && !(e.iv || []).length) e.iv = [{ id:nid(), start:540, len:480, cyc:null }]; }); return;
+    case 'exRow':   edit(() => { cur().exceptions.find(x => x.id === id).sameAsRow = +t.value; }); return;
+    case 'exSched': edit(() => { cur().exceptions.find(x => x.id === id).schedId = t.value; }); return;
+    case 'exYear':  edit(() => { cur().exceptions.find(x => x.id === id).yearly = t.checked; }); return;
+    case 'exIvFrom': case 'exIvTo': {
+      edit(() => {
+        const e = cur().exceptions.find(x => x.id === id); if(!e) return;
+        const r = (e.iv || []).find(x => x.id === t.dataset.iv); if(!r) return;
+        if(a === 'exIvFrom'){ const end = r.start + r.len; const st = Math.min(parseHM(t.value), DAY_MIN - 15);
+          r.start = st; r.len = Math.max(15, end - st); }
+        else { let en = parseHM(t.value); if(en <= r.start) en += DAY_MIN; r.len = Math.max(15, en - r.start); }
+        e.iv = normalize(e.iv).list;
+      }); return;
+    }
+    /* holidays */
+    case 'holApply': edit(() => cur().useHolidayList = t.checked); return;
+    case 'holMode':  edit(() => cur().holidayMode = t.value); return;
+    case 'holRow':   edit(() => cur().holidaySameAsRow = +t.value); return;
+    case 'holAdd':   if(t.value) edit(() => { if(!S.holidays.includes(t.value)) S.holidays.push(t.value); }); return;
+
+    /* validity */
+    case 'vFrom': edit(() => cur().validFrom = t.value); return;
+    case 'vTo':   edit(() => cur().validTo = t.value); return;
+  }
+});
+
+document.addEventListener('input', ev => {
+  const t = ev.target.closest('[data-act]'); if(!t) return;
+  if(t.dataset.act === 'search'){ S.search = t.value; render(); }
+  else if(t.dataset.act === 'rename'){ cur().name = t.value; cur().nameKey = null; S.dirty = snap() !== S.saved; render(); }
+  else if(t.dataset.act === 'exNote'){ const e = cur().exceptions.find(x => x.id === t.dataset.id);
+    if(e){ e.note = t.value; e.noteKey = null; S.dirty = true; } }
+});
+
+/* ── panel resizing ───────────────────────────────────────────── */
+function clampPanel(which, w){
+  const p = PANEL[which], other = which === 'side' ? S.inspW : S.sideW;
+  const spare = Math.max(p.min, innerWidth - other - MAIN_MIN - 14);
+  return Math.round(Math.max(p.min, Math.min(w, p.max, spare)));
+}
+function setPanel(which, w){
+  const v = clampPanel(which, w);
+  if(which === 'side') S.sideW = v; else S.inspW = v;
+  const el = shell.querySelector(which === 'side' ? '.side' : '.insp');
+  if(el) el.style.width = v + 'px';
+  const sp = shell.querySelector(`.splitter[data-split="${which}"]`);
+  if(sp) sp.setAttribute('aria-valuenow', v);
+  return v;
+}
+document.addEventListener('mousedown', ev => {
+  const sp = ev.target.closest('.splitter'); if(!sp || ev.button !== 0) return;
+  ev.preventDefault();
+  const which = sp.dataset.split;
+  S.rs = { which, x0:ev.clientX, w0:which === 'side' ? S.sideW : S.inspW };
+  sp.classList.add('splitter--drag');
+  document.body.dataset.resizing = '1';
+});
+document.addEventListener('mousemove', ev => {
+  const g = S.rs; if(!g) return;
+  const dx = ev.clientX - g.x0;
+  setPanel(g.which, g.w0 + (g.which === 'side' ? dx : -dx));
+});
+document.addEventListener('mouseup', () => {
+  if(!S.rs) return;
+  S.rs = null;
+  delete document.body.dataset.resizing;
+  shell.querySelectorAll('.splitter--drag').forEach(e => e.classList.remove('splitter--drag'));
+  render();
+});
+document.addEventListener('dblclick', ev => {
+  const sp = ev.target.closest('.splitter'); if(!sp) return;
+  setPanel(sp.dataset.split, PANEL[sp.dataset.split].def); render();
+});
+addEventListener('resize', () => { setPanel('side', S.sideW); setPanel('insp', S.inspW); render(); });
+
+/* ── grid drag: paint / erase / move / resize ─────────────────── */
+document.addEventListener('mousedown', ev => {
+  const track = ev.target.closest('.track'); if(!track || ev.button !== 0) return;
+  const row = +track.dataset.track, rect = track.getBoundingClientRect();
+  const toMin = x => Math.max(0, Math.min(DAY_MIN, (x - rect.left) / rect.width * DAY_MIN));
+  const blk = ev.target.closest('.blk');
+
+  if(blk && blk.dataset.cont === '1'){
+    S.focusRow = +blk.dataset.owner; S.sel = { row:+blk.dataset.owner, id:blk.dataset.blk }; render(); return;
+  }
+  if(blk && S.tool === 'erase'){
+    ev.preventDefault();
+    S.focusRow = row; S.sel = null;
+    S.drag = { kind:'erase', row, rect, a:snapv(toMin(ev.clientX)), b:snapv(toMin(ev.clientX)), moved:false, pushed:false };
+    render(); return;
+  }
+  if(blk){
+    const r = ivById(row, blk.dataset.blk); if(!r) return;
+    ev.preventDefault();
+    S.sel = { row, id:r.id }; S.focusRow = row; S.checked.clear();
+    const handle = ev.target.closest('.blk__h');
+    S.drag = { kind: handle ? (handle.dataset.h === 'l' ? 'left' : 'right') : 'move',
+      row, id:r.id, rect, x0:ev.clientX, s0:r.start, l0:r.len, moved:false, pushed:false };
+    render(); return;
+  }
+  ev.preventDefault();
+  S.focusRow = row; S.sel = null;
+  S.drag = { kind:S.tool === 'erase' ? 'erase' : 'paint', row, rect, a:snapv(toMin(ev.clientX)), b:snapv(toMin(ev.clientX)), moved:false, pushed:false };
+  render();
+});
+document.addEventListener('mousemove', ev => {
+  const g = S.drag; if(!g) return;
+  const toMin = x => Math.max(0, Math.min(DAY_MIN, (x - g.rect.left) / g.rect.width * DAY_MIN));
+  g.moved = true;
+  if(g.kind === 'paint' || g.kind === 'erase'){
+    g.b = snapv(toMin(ev.clientX)); drawGhost(g);
+  } else {
+    const dm = snapv((ev.clientX - g.x0) / g.rect.width * DAY_MIN);
+    if(!dm && !g.pushed) return;
+    const r = ivById(g.row, g.id); if(!r) return;
+    if(!g.pushed){ g.pushed = true; pushUndo(); }
+    if(g.kind === 'move')       { r.start = Math.max(0, Math.min(g.s0 + dm, DAY_MIN - S.step)); r.len = g.l0; }
+    else if(g.kind === 'left')  { const end = g.s0 + g.l0; r.start = Math.max(0, Math.min(g.s0 + dm, end - S.step)); r.len = end - r.start; }
+    else                        { r.len = Math.max(S.step, Math.min(g.l0 + dm, DAY_MIN * 2 - r.start)); }
+    render();
+  }
+});
+document.addEventListener('mouseup', () => {
+  const g = S.drag; if(!g) return; S.drag = null; clearGhost();
+  if(g.kind === 'paint'){
+    const from = Math.min(g.a, g.b), to = Math.max(g.a, g.b);
+    const len = to - from || 120;
+    pushUndo();
+    const r = { id:nid(), start:Math.min(from, DAY_MIN - S.step), len:Math.max(S.step, Math.min(len, DAY_MIN - from)), cyc:null };
+    setRow(g.row, (rows()[g.row] || []).concat([r]));
+    const kept = (rows()[g.row] || []).find(x => x.id === r.id)
+      || (rows()[g.row] || []).find(x => x.start <= r.start && x.start + x.len >= r.start + r.len);
+    S.sel = kept ? { row:g.row, id:kept.id } : null;
+    S.dirty = snap() !== S.saved; render(); return;
+  }
+  if(g.kind === 'erase'){
+    const from = Math.min(g.a, g.b), to = Math.max(g.a, g.b);
+    pushUndo(); rows()[g.row] = subtract(rows()[g.row] || [], from, to === from ? to + S.step : to);
+    S.dirty = snap() !== S.saved; render(); return;
+  }
+  if(!g.pushed){ render(); return; }
+  setRow(g.row, rows()[g.row]);
+  if(!ivById(g.row, g.id)) S.sel = (rows()[g.row] || []).length ? { row:g.row, id:rows()[g.row][0].id } : null;
+  S.dirty = snap() !== S.saved; render();
+});
+function drawGhost(g){
+  const track = shell.querySelector(`.track[data-track="${g.row}"]`); if(!track) return;
+  let el = track.querySelector('.ghost');
+  if(!el){ el = document.createElement('div'); el.className = 'ghost' + (g.kind === 'erase' ? ' ghost--erase' : ''); track.appendChild(el); }
+  const from = Math.min(g.a, g.b), to = Math.max(g.a, g.b);
+  el.style.left = (from / DAY_MIN * 100) + '%';
+  el.style.width = (Math.max(to - from, 4) / DAY_MIN * 100) + '%';
+  el.textContent = to - from >= 90 ? `${fmt(from, S.use12)} – ${fmt(to, S.use12)}` : '';
+}
+function clearGhost(){ shell.querySelectorAll('.ghost').forEach(e => e.remove()); }
+
+/* double-click a block opens it in the inspector */
+document.addEventListener('dblclick', ev => {
+  const blk = ev.target.closest('.blk'); if(!blk) return;
+  S.focusRow = +blk.dataset.owner; S.sel = { row:+blk.dataset.owner, id:blk.dataset.blk }; render();
+});
+
+/* keyboard */
+document.addEventListener('keydown', ev => {
+  const sp = ev.target.classList && ev.target.classList.contains('splitter') ? ev.target : null;
+  if(sp && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')){
+    ev.preventDefault();
+    const k = (ev.key === 'ArrowLeft' ? -1 : 1) * (ev.shiftKey ? 48 : 16);
+    const which = sp.dataset.split;
+    setPanel(which, (which === 'side' ? S.sideW : S.inspW) + (which === 'side' ? k : -k));
+    return;
+  }
+  if(sp && (ev.key === 'Home' || ev.key === 'Enter')){
+    ev.preventDefault(); setPanel(sp.dataset.split, PANEL[sp.dataset.split].def); render(); return;
+  }
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName);
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z'){ ev.preventDefault(); ev.shiftKey ? doRedo() : doUndo(); return; }
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y'){ ev.preventDefault(); doRedo(); return; }
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's'){ ev.preventDefault();
+    if(S.dirty){ S.saved = snap(); S.dirty = false; notify('success', T('savedShort'), MSG_MS_SAVE); render(); } return; }
+  if(ev.key === 'Escape'){ if(S.modal){ S.modal = null; render(); } else if(S.pop){ S.pop = null; render(); }
+    else if(S.calSel){ S.calSel = null; render(); } else if(S.sel){ S.sel = null; render(); } return; }
+  if(typing) return;
+  if(!S.sel) return;
+  const r = ivById(S.sel.row, S.sel.id); if(!r) return;
+  if(ev.key === 'Delete' || ev.key === 'Backspace'){ ev.preventDefault();
+    edit(() => { setRow(S.sel.row, (rows()[S.sel.row] || []).filter(x => x.id !== S.sel.id)); S.sel = null; }); return; }
+  if(ev.key === 'ArrowLeft' || ev.key === 'ArrowRight'){
+    ev.preventDefault();
+    const k = ev.key === 'ArrowLeft' ? -S.step : S.step;
+    edit(() => { const x = ivById(S.sel.row, S.sel.id); if(!x) return;
+      if(ev.shiftKey) x.len = Math.max(S.step, x.len + k);
+      else x.start = Math.max(0, Math.min(x.start + k, DAY_MIN - S.step)); });
+  }
+});
+
+/* keep the "now" marker and Active-now pills honest */
+setInterval(() => { if(!S.drag && !S.rs && !S.pop && !S.modal) render(); }, 30000);
+setInterval(tickClock, 1000);
+
+render();
+</script>
+</body>
+</html>
