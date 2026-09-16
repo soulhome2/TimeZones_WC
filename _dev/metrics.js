@@ -1,7 +1,7 @@
 /* Counts comparable metrics across the prototype versions. */
 const fs = require('fs');
 const pl = (n, a, b, c) => a;
-for(const f of ['schedule_v3.html','schedule_v4.html','schedule_v5.html']){
+for(const f of ['schedule_v3.html','schedule_v4.html','schedule_v5.html','schedule_v6.html']){
   const h = fs.readFileSync(f, 'utf8');
   const js = h.slice(h.indexOf('<script>') + 8, h.lastIndexOf('</script>'));
   const m = js.match(/const I18N = \{[\s\S]*?\n\}\};/);

@@ -1,5 +1,9 @@
 const fs = require('fs');
-const P = 'C:\\Users\\dmitriy.gorbanev\\YandexDisk\\Documents\\Work\\Obsidian\\Repos\\TimeZones_WC\\schedule_v5.html';
+const path = require('path');
+/* `node _dev/test_v5.js [file]` — defaults to v5, so the same suite can be run
+   against a newer prototype without copying it. */
+const P = path.resolve(__dirname, '..', process.argv[2] || 'schedule_v5.html');
+console.log('suite target: ' + path.basename(P));
 const html = fs.readFileSync(P, 'utf8');
 const src = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
 

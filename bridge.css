@@ -1,0 +1,386 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   bridge.css — ONE PSIM restyle of the Time schedules prototype
+   Target: schedule_v6.html · loaded AFTER the prototype's own <style>
+   Rules:  ONE.PSIM.PrototypeKit/docs/RESTYLE-RULES.md §0–§4, AGENTS.md, DECISIONS.md
+           Component ladders cross-checked against the kit's own transcription
+           (src/theme/tailwind.css @layer components), which is generated from the
+           same oneTheme.ts as §2.
+
+   Markup, JS and media queries are untouched. Every state below comes from §2 or
+   from the kit's component layer; nothing is invented. Decisions taken on my own,
+   open questions and rule gaps are listed in BRIDGE-README.md.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import "theme/one-psim.css";
+@import "theme/native.css";
+
+/* ═══ §1 · Token map ════════════════════════════════════════════════════════
+   Mapped by role in consumption, not by name (§0.3). Where one prototype
+   variable serves two roles, the dominant role goes here and the other
+   consumers are overridden point-wise further down.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root,
+body {
+  /* type & mono */
+  --font: var(--one-font-ui);
+  --mono: var(--one-font-mono);
+
+  /* surfaces */
+  --bg-canvas: var(--one-canvas);
+  --bg-surface: var(--one-surface);
+  --bg-muted: var(--one-surface-muted);
+  --bg-subtle: var(--one-surface-subtle);
+  --bg-popup: var(--one-popup);
+
+  /* foreground */
+  --fg-default: var(--one-fg);
+  --fg-muted: var(--one-fg-muted);
+  --fg-subtle: var(--one-fg-subtle);
+  --fg-disabled: var(--one-fg-disabled);
+
+  /* borders — see the region/divider/control split below */
+  --border-strong: var(--one-border);      /* consumed as the control border at rest */
+  --border-popup: var(--one-border);       /* §2.9b: popup frame is `border` */
+
+  /* neutral controls */
+  --control-bg: var(--one-control-bg);
+  --control-hover: var(--one-control-hover);
+  --control-selected: var(--one-accent-soft);   /* row/card selection = selected-soft (§2.4) */
+
+  /* accent */
+  --accent: var(--one-accent);
+  --accent-hover: var(--one-primary-hover);     /* §2.8: primary hover is LIGHTER than rest */
+  --accent-pressed: var(--one-primary-pressed);
+  --accent-on: var(--one-accent-on);
+  --accent-soft: var(--one-accent-soft);
+  /* no DS token for a half-strength accent; derived the same way .blk--cont already does */
+  --accent-half: color-mix(in srgb, var(--one-accent) 55%, var(--one-surface));
+
+  /* status: fills and indicator lines */
+  --status-info: var(--one-info);
+  --status-warning: var(--one-warning);
+  --danger: var(--one-danger);
+  /* §1 maps success in text/indicators to the -icon step, because --one-success
+     (#20D300) is unreadable as text; the same reasoning is applied to warning text
+     further down (own decision, see BRIDGE-README.md). */
+  --status-success: var(--one-success-icon);
+
+  /* status tints = feedback triples */
+  --fb-info: var(--one-accent-soft);
+  --fb-success: var(--one-success-bg);
+  --fb-warning: var(--one-warning-bg);
+  --fb-danger: var(--one-danger-bg);
+
+  /* grid hairlines — within-region dividers (§1) */
+  --grid-line: var(--one-surface-subtle);
+  --grid-line-strong: var(--one-border);
+  --track-bg: var(--one-surface-muted);
+
+  /* overlay & elevation — the DS exports one shadow */
+  --scrim: var(--one-scrim);
+  --shadow-popup: var(--one-shadow);
+  --shadow-dialog: var(--one-shadow);
+
+  /* radii: controls = radius-control, panels & dialogs = radius-window
+     (kit .btn/.field vs .card; see the §1-vs-kit note in BRIDGE-README.md) */
+  --r-ctl: var(--one-radius-control);
+  --r-box: var(--one-radius-window);
+  --r-win: var(--one-radius-window);
+  --r-pill: var(--one-radius-pill);
+  /* --r-xs (2px hairline strips) has no DS counterpart — left alone (§2.11) */
+}
+
+/* Region boundaries: top-bar edge, panel-header edge, column splitters, panel
+   frames. D-024 — surface-subtle in Light, border in Dark. The prototype spends
+   one variable on this, so the two schemes are split here. */
+:root,
+body[data-scheme="light"] { --border-default: var(--one-surface-subtle); }
+body[data-scheme="dark"]  { --border-default: var(--one-border); }
+
+/* The same variable also paints two other roles (§0.3) — restored point-wise: */
+.pill--idle,
+.chip { border-color: var(--one-border); }                      /* control border */
+.drow,
+.rule,
+table.tbl td { border-top-color: var(--one-surface-subtle); }   /* row divider (§1) */
+
+/* ═══ §2.8 · Buttons — ladders verbatim ═════════════════════════════════════
+   .btn is the DS secondary (neutral fill + border), .btn--primary primary,
+   .btn--outline outline, .btn--subtle subtle/icon-only.
+   No rule below sets `color` on hover or active: D-022.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.btn { border-color: var(--one-border); }
+.btn:hover:not(:disabled)  { background: var(--one-control-hover); }
+.btn:active:not(:disabled) { background: var(--one-control-pressed); }
+.btn:disabled {
+  opacity: 1;                                   /* §2.8: disabled by tokens, not opacity */
+  color: var(--one-fg-disabled);
+  background: var(--one-control-disabled);
+  border-color: var(--one-border);
+}
+
+.btn--primary { background: var(--one-accent); color: var(--one-accent-on); border-color: var(--one-accent); }
+.btn--primary:hover:not(:disabled)  { background: var(--one-primary-hover);  border-color: var(--one-primary-hover); }
+.btn--primary:active:not(:disabled) { background: var(--one-primary-pressed); border-color: var(--one-primary-pressed); }
+.btn--primary:disabled { background: var(--one-control-disabled); border-color: var(--one-border); color: var(--one-fg-disabled); }
+
+.btn--outline { background: transparent; border-color: var(--one-border); }
+.btn--outline:hover:not(:disabled)  { background: var(--one-control-hover); border-color: var(--one-border); }
+.btn--outline:active:not(:disabled) { background: var(--one-control-pressed); }
+
+.btn--subtle { background: transparent; }
+.btn--subtle:hover:not(:disabled)  { background: var(--one-control-hover); }
+.btn--subtle:active:not(:disabled) { background: var(--one-control-pressed); }
+
+.btn--outline:disabled,
+.btn--subtle:disabled,
+.btn--danger:disabled { background: transparent; }
+
+/* Button has no danger appearance — §2.12 gap. The prototype's weight (text
+   button with a red label) is its own UX decision (§2.1/D-016) and is kept; only
+   the tokens are mapped, and the label colour never changes (D-022). */
+.btn--danger { border-color: var(--one-border); color: var(--one-danger); }
+.btn--danger:hover:not(:disabled)  { background: var(--one-danger-bg); }
+.btn--danger:active:not(:disabled) { background: var(--one-danger-bg); }
+
+/* ═══ §2.4 / D-018 · Toggles = ToggleButton ═════════════════════════════════
+   Segmented switches (24h/12h, schedule type, tool, snap step, weekday filter)
+   and single on/off buttons. Unselected = subtle, selected = the primary ladder.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.seg { border-color: var(--one-border); }
+.seg button + button { border-left-color: var(--one-border); }
+.dow7 { border-color: var(--one-border); }
+.dow7 button + button { border-left-color: var(--one-border); }
+
+.seg button:hover:not(:disabled),
+.dow7 button:hover:not(:disabled)  { background: var(--one-control-hover); }
+.seg button:active:not(:disabled),
+.dow7 button:active:not(:disabled) { background: var(--one-control-pressed); }
+
+.btn--on,
+.tog[aria-pressed="true"],
+.seg button[aria-pressed="true"],
+.dow7 button[aria-pressed="true"] {
+  background: var(--one-accent);
+  color: var(--one-accent-on);
+  border-color: var(--one-accent);
+}
+.btn--on:hover:not(:disabled),
+.tog[aria-pressed="true"]:hover:not(:disabled),
+.seg button[aria-pressed="true"]:hover:not(:disabled),
+.dow7 button[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--one-primary-hover);
+  border-color: var(--one-primary-hover);
+}
+.btn--on:active:not(:disabled),
+.tog[aria-pressed="true"]:active:not(:disabled),
+.seg button[aria-pressed="true"]:active:not(:disabled),
+.dow7 button[aria-pressed="true"]:active:not(:disabled) {
+  background: var(--one-primary-pressed);
+  border-color: var(--one-primary-pressed);
+}
+.tog { border-color: var(--one-border); }
+
+/* ═══ §2.6 / D-025 · Text fields and ComboBox — halo, not a ring ════════════
+   input / select / textarea = TextField / ComboBox. `background-color`, never the
+   `background` shorthand: the select arrow lives in background-image (§2.6).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.inp,
+.langsel {
+  background-color: var(--one-editor-bg);
+  border-color: var(--one-editor-border);
+  color: var(--one-fg);
+}
+.inp:hover:not(:disabled):not(:focus),
+.langsel:hover:not(:disabled):not(:focus) {
+  background-color: var(--one-editor-hover);
+  border-color: var(--one-editor-border-hover);
+}
+.inp:active:not(:disabled):not(:focus),
+.langsel:active:not(:disabled):not(:focus) {
+  background-color: var(--one-editor-pressed);
+  border-color: var(--one-editor-border-pressed);
+}
+.inp:focus,
+.langsel:focus {
+  outline: none;
+  background-color: var(--one-editor-focus);
+  border-color: var(--one-editor-border-focus);
+  box-shadow: 0 0 0 2px var(--one-focus-halo);
+}
+.inp:disabled,
+.langsel:disabled {
+  opacity: 1;
+  background-color: var(--one-editor-disabled);
+  border-color: var(--one-border);
+  color: var(--one-fg-disabled);
+}
+
+/* The prototype's `.inp { background: … }` shorthand wipes the arrow that
+   native.css puts on every <select>; both selects get it back here, with the
+   identical asset, so the ComboBox chevron is one shape across the screen. */
+select.inp,
+.langsel {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238C8C8C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+}
+
+/* ═══ §2.3 / D-011 · Selection is shown by the background only ══════════════ */
+/* §2.10 / D-019: a row that carries buttons hovers at half strength, so the
+   hover of its own kebab button still reads on top. */
+.sched:hover { background: color-mix(in srgb, var(--one-control-hover) 50%, var(--one-surface)); }
+.sched[aria-selected="true"] { background: var(--one-accent-soft); border-color: var(--one-accent); }
+.sched[aria-selected="true"]:hover { background: var(--one-accent-soft-hover); }
+.sched:focus-visible { outline: 2px solid var(--one-focus-ring); outline-offset: 2px; }
+
+/* The focused grid row painted its day name and total in accent — the label now
+   keeps the foreground and only the background carries the state (§2.3). The left
+   marker takes the DS selected indicator, as .menu-item does (§2.9a). */
+.drow--focus .dday,
+.drow--focus .dsum { background: var(--one-accent-soft); color: var(--one-fg); }
+.drow--focus .dchk { background: var(--one-accent-soft); box-shadow: inset 3px 0 0 var(--one-selected-indicator); }
+.drow--today .dday { color: var(--one-fg); }
+
+/* ═══ Calendar cells ════════════════════════════════════════════════════════ */
+.cal__cell:hover       { border-color: var(--one-border-strong); }   /* §1: control hover */
+.cal__cell--override   { background: var(--one-warning-bg); border-color: var(--one-warning-icon); }
+.cal__cell--outside    { background: var(--one-surface-muted); }
+.cal__cell--today      { box-shadow: inset 0 0 0 2px var(--one-accent); }
+.cal__cell--sel        { background: var(--one-accent-soft); border-color: var(--one-accent); }
+.cal__sel              { background: var(--one-accent-soft); border-color: var(--one-accent); }
+.lg--override          { border-color: var(--one-warning-icon); }
+.cal__strip            { border-color: var(--one-surface-subtle); }
+
+/* ═══ D-031 · Tabs and side navigation — the two DS selection exceptions ════
+   The selected Tab and the current nav item colour label and indicator with
+   nav-selected. This is the MuiTab ladder, not an invented accent label.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.tabs button:hover { background: var(--one-nav-hover); color: var(--one-fg); }
+.tabs button[aria-current="page"] {
+  color: var(--one-nav-selected-text);
+  border-bottom-color: var(--one-nav-selected-text);
+}
+.tabbar button:hover { background: var(--one-nav-hover); color: var(--one-fg); }
+.tabbar button[aria-selected="true"] {
+  color: var(--one-nav-selected-text);
+  border-bottom-color: var(--one-nav-selected-text);
+}
+.tabs button:focus-visible,
+.tabbar button:focus-visible { outline: 2px solid var(--one-focus-ring); outline-offset: -2px; }
+
+/* ═══ Badges and pills ══════════════════════════════════════════════════════ */
+.pill        { background: var(--one-surface-subtle); }
+.pill--live  { background: transparent; border-color: var(--one-accent);  color: var(--one-accent); }
+.pill--idle  { background: transparent; border-color: var(--one-border);  color: var(--one-fg-muted); }
+/* the warning pill put the hue as text on its own tint — replaced by the DS
+   warning triple, which is exactly the kit's .badge-warning (≈10:1) */
+.pill--warn  { background: var(--one-warning-bg); border-color: var(--one-warning-icon); color: var(--one-warning-text); }
+.chip        { background: var(--one-surface); border-color: var(--one-border); }
+/* schedule-type marker: a neutral badge, not accent text on an accent tint */
+.kindtag     { background: var(--one-surface-subtle); color: var(--one-fg-muted); }
+.tabbadge    { background: var(--one-surface-subtle); color: var(--one-fg-muted); }
+.tabbar button[aria-selected="true"] .tabbadge { background: var(--one-accent); color: var(--one-accent-on); }
+.tabbadge--warn,
+.tabbar button[aria-selected="true"] .tabbadge--warn { background: var(--one-warning); }
+
+/* ═══ §2.9a · Popup = Menu ══════════════════════════════════════════════════ */
+.pop {
+  background: var(--one-popup);
+  border-color: var(--one-border);
+  border-radius: var(--one-radius-container);
+  box-shadow: var(--one-shadow);
+}
+.pop__item          { color: var(--one-fg); }
+.pop__item:hover    { background: var(--one-control-hover); }
+.pop__item:focus-visible { outline: 2px solid var(--one-focus-ring); outline-offset: -2px; background: var(--one-popup); }
+.pop__item--danger  { color: var(--one-danger); }
+.pop__item:disabled { color: var(--one-fg-disabled); }
+/* popup caption = .menu-head: caption role, fg-muted, sentence case */
+.pop__cap {
+  font: var(--one-type-caption);
+  letter-spacing: var(--one-type-caption-tracking);
+  text-transform: none;
+  color: var(--one-fg-muted);
+}
+.sep { background: var(--one-border); }        /* = .menu-sep */
+
+/* ═══ Dialog ════════════════════════════════════════════════════════════════ */
+.modal      { background: var(--one-scrim); }
+.modal__box {
+  background: var(--one-dialog);
+  border: 1px solid var(--one-border);
+  border-radius: var(--one-radius-window);
+  box-shadow: var(--one-shadow);
+}
+.modal__t { font: var(--one-type-heading-md); letter-spacing: var(--one-type-heading-md-tracking); color: var(--one-fg); }
+.modal__c { color: var(--one-fg-muted); }
+
+/* ═══ §2.2b / D-021 · Headings on typography roles, never a tracked caps caption
+   Panel and section titles = heading-sm, dialog title = heading-md. ONE PSIM has
+   no 9–12px upper-case tracked section caption.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.side__title,
+.insp__title,
+.secttl,
+.grp h4,
+.insp__sec > .lbl {
+  font: var(--one-type-heading-sm);
+  letter-spacing: var(--one-type-heading-sm-tracking);
+  text-transform: none;
+  color: var(--one-fg);
+}
+.grp h4 { margin: 0 0 6px; }                   /* keep the prototype's rhythm */
+.insp__sec > .lbl { margin-bottom: 4px; }
+
+/* §2.13 / D-028 · Field label: static, above the field, label role, fg-muted */
+.lbl {
+  font: var(--one-type-label);
+  letter-spacing: var(--one-type-label-tracking);
+  text-transform: none;
+  color: var(--one-fg-muted);
+  margin-bottom: 4px;
+}
+.patfld .lbl { margin: 0; }                    /* the pattern bar spaces its own fields */
+
+/* Column headers of the grid and the calendar = label-strong, as kit .table th */
+.ruler__pad,
+.cal__dow span {
+  font: var(--one-type-label-strong);
+  letter-spacing: var(--one-type-label-strong-tracking);
+  text-transform: none;
+  color: var(--one-fg-muted);
+}
+
+/* ═══ §2.6 · Focus ring for non-field controls ══════════════════════════════
+   The prototype relied on the browser default everywhere except fields and the
+   splitters; buttons, segments and rows get the MuiButton recipe.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.btn:focus-visible,
+.seg button:focus-visible,
+.tog:focus-visible,
+.dow7 button:focus-visible {
+  outline: 2px solid var(--one-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ═══ Status text ═══════════════════════════════════════════════════════════
+   Warning and success as *text* take the -icon step of their triple: the plain
+   hue is 2.2:1 on surface-muted in Light. §1 already does this for success; the
+   same reasoning applied to warning (own decision — BRIDGE-README.md).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.statusbar__msg[data-kind="info"]    { color: var(--one-info); }
+.statusbar__msg[data-kind="success"] { color: var(--one-success-icon); }
+.statusbar__msg[data-kind="warning"] { color: var(--one-warning-icon); }
+.statusbar__msg[data-kind="danger"]  { color: var(--one-danger); }
+.exc__warn { color: var(--one-warning-icon); }
+
+/* ═══ Remaining surfaces ════════════════════════════════════════════════════ */
+.splitter::after { background: var(--one-border-strong); }
+/* kbd drew a 2px bottom border in a pale colour; with the ONE PSIM grey that
+   reads as a frame (§2.5 reasoning), so the keycap is 1px all round */
+kbd { background: var(--one-surface-muted); border: 1px solid var(--one-border); }
+pre.json { font-family: var(--one-font-mono); }
