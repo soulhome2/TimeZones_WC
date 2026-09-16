@@ -68,7 +68,12 @@
   background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1rem;
 }
 @supports (appearance: base-select) {
-  :where(select, select.field), :where(select, select.field)::picker(select) { appearance: base-select; }
+  /* base-select is a capability switch, not a look: without it the popup is the browser's native one and none of the
+     option rules below can apply (Chromium's native dark popup even draws its own light edge — seen in a restyled
+     prototype whose own `.langsel { appearance: none }` had switched it off). A prototype's `appearance: none` on a
+     <select> only means «hide the native arrow», which base-select also does (::picker-icon below) — so this one
+     declaration is !important on purpose and stays inside @supports. */
+  select, select::picker(select) { appearance: base-select !important; }
   :where(select, select.field) selectedcontent { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :where(select, select.field)::picker-icon { display: none; }
   :where(select, select.field)::picker(select) { border: 1px solid var(--one-border); border-radius: var(--one-radius-container); background: var(--one-popup); padding: 4px; margin-top: 4px; box-shadow: var(--one-shadow); }

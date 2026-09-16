@@ -14,6 +14,8 @@ const ok = (n, c, x) => { if(c){ pass++; console.log('  ok   ' + n); }
 
 console.log('== syntax');
 const noComments = bridge.replace(/\/\*[\s\S]*?\*\//g, '');
+/* declarations only, comments stripped — used by the D-043 check below */
+const decls0 = () => noComments;
 const open = (noComments.match(/\{/g) || []).length, close = (noComments.match(/\}/g) || []).length;
 ok('braces balanced', open === close, open + ' { vs ' + close + ' }');
 ok('@import rules come first',
@@ -82,6 +84,50 @@ for(const r of rules){
 }
 ok(rules.length + ' rules, every selector matches prototype vocabulary', !missing.length,
   '\n        ' + missing.join('\n        '));
+
+console.log('\n== §2.9 (D-043): appearance is native.css\'s business, not the bridge\'s');
+ok('bridge sets no `appearance` on <select>', !/appearance\s*:/.test(decls0()),
+  (decls0().match(/[^\n]*appearance[^\n]*/g) || []).join(' | '));
+ok('bridge still supplies the arrow and the padding',
+  /select\.inp[\s\S]{0,400}background-image:\s*url\("data:image\/svg\+xml/.test(bridge)
+  && /select\.inp[\s\S]{0,200}padding-right:\s*2rem/.test(bridge));
+ok('native.css forces base-select inside @supports',
+  /@supports \(appearance: base-select\)[\s\S]*?appearance:\s*base-select\s*!important/.test(native));
+ok('native.css still sets appearance:none for the fallback',
+  /:where\(select, select\.field\)\s*\{[^}]*appearance:\s*none/.test(native));
+
+console.log('\n== §2.9a′ (D-044): two-line popup items');
+{
+  /* which prototype items actually carry a title AND a description */
+  const items = [...html.matchAll(/<(button|div) class="pop__item[^>]*>([\s\S]*?)<\/(?:button|div)>/g)]
+    .map(m => m[2]);
+  const rich = items.filter(s => /<br>/.test(s));
+  const withMedia = items.filter(s => /pop__bar/.test(s));
+  const inlineHint = items.filter(s => /class="hint"/.test(s) && !/<br>/.test(s));
+  console.log('     .pop__item templates: ' + items.length
+    + '  rich (title+description): ' + rich.length
+    + '  with preview: ' + withMedia.length
+    + '  single-line with inline hint: ' + inlineHint.length);
+  ok('three rich item kinds found (templates, new type, day group)', rich.length === 3, rich.length);
+  ok('one of them carries a preview', withMedia.length === 1, withMedia.length);
+  ok('single-line items with an inline hint are NOT matched by :has(br)', inlineHint.length >= 1);
+
+  const richBlock = /\.pop__item:has\(br\)[\s\S]{0,260}?\}/.exec(bridge);
+  ok('bridge lifts the fixed height instead of keeping 26px',
+    richBlock && /height:\s*auto/.test(richBlock[0]), richBlock && richBlock[0].replace(/\s+/g,' '));
+  ok('top alignment', richBlock && /align-items:\s*flex-start/.test(richBlock[0]));
+  ok('8px padding', richBlock && /padding:\s*8px/.test(richBlock[0]));
+  ok('12px gap', richBlock && /gap:\s*12px/.test(richBlock[0]));
+  ok('title on body-md', /\.pop__item:has\(br\) b[\s\S]{0,200}--one-type-body-md/.test(bridge));
+  ok('description on caption + fg-muted',
+    /\.pop__item:has\(br\) \.hint[\s\S]{0,260}--one-type-caption[\s\S]{0,200}--one-fg-muted/.test(bridge));
+  ok('preview 40×20 and never shrinks',
+    /\.pop__bar\s*\{[^}]*flex:\s*none[^}]*width:\s*40px[^}]*height:\s*20px/.test(bridge.replace(/\n/g,' ')));
+  ok('the prototype still declares its own 26px row (not deleted)',
+    /\.pop__item\{[^}]*height:26px/.test(html));
+  ok('grouped popup captions become overline subheaders',
+    /\.pop:has\(\.pop__cap ~ \.pop__cap\) \.pop__cap[\s\S]{0,260}text-transform:\s*uppercase/.test(bridge));
+}
 
 console.log('\n== token-block coverage: which prototype variables were re-pointed');
 const protoVars = new Set([...html.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1])

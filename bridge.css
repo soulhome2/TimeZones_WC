@@ -218,10 +218,15 @@ table.tbl td { border-top-color: var(--one-surface-subtle); }   /* row divider (
 
 /* The prototype's `.inp { background: … }` shorthand wipes the arrow that
    native.css puts on every <select>; both selects get it back here, with the
-   identical asset, so the ComboBox chevron is one shape across the screen. */
+   identical asset, so the ComboBox chevron is one shape across the screen.
+   §2.9 (D-043): only the arrow and the padding belong here — `appearance` must
+   not be touched in a bridge. Any `appearance: none` on a <select> switches off
+   base-select and drops the popup back to the unstylable OS window; native.css
+   now forces `appearance: base-select !important` inside its @supports block and
+   hides the native arrow with ::picker-icon. Outside that block native.css still
+   sets `appearance: none` itself, so the fallback keeps working. */
 select.inp,
 .langsel {
-  appearance: none;
   padding-right: 2rem;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238C8C8C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -307,6 +312,73 @@ select.inp,
   color: var(--one-fg-muted);
 }
 .sep { background: var(--one-border); }        /* = .menu-sep */
+
+/* ═══ §2.9a′ / D-044 · Двухстрочный пункт выпадающего окна ══════════════════
+   A 32px row is for a one-line action. An item that carries a title AND a
+   description — or a leading preview — is a second kind of item: height by
+   content, 8px padding, top alignment, 12px gap, title body-md, description
+   caption in fg-muted, preview 40×20 that never shrinks. Ladder transcribed
+   from the kit's .menu-item-rich / -media / -title / -desc.
+
+   The prototype has three such menus (templates, new-schedule type, day-group
+   picker) and the rule itself suggests selecting them with :has(). The
+   discriminator is the <br> between title and description: the copy-from menu
+   puts its row count inline on the same line and correctly stays a 32px row,
+   and the "all groups are already added" line is a bare hint with no title.
+   Fixed height is overridden here, not removed from the prototype's CSS.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.pop__item:has(br),
+.pop__item:has(.pop__bar) {
+  height: auto;
+  min-height: 0;
+  padding: 8px;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* leading preview = .menu-item-media: 40×20, optically aligned to the title
+   line by the kit's 2px nudge, and never squeezed by a long description */
+.pop__item:has(br) > .pop__bar,
+.pop__item:has(.pop__bar) > .pop__bar {
+  flex: none;
+  width: 40px;
+  height: 20px;
+  margin-top: 2px;
+  border-radius: var(--one-radius-control);
+  overflow: hidden;
+}
+/* title = .menu-item-title (body-md, regular — the DS takes the hierarchy from
+   size and colour, not from weight, so <b> is levelled to 400) */
+.pop__item:has(br) b,
+.pop__item:has(.pop__bar) b {
+  font: var(--one-type-body-md);
+  letter-spacing: var(--one-type-body-md-tracking);
+  color: var(--one-fg);
+}
+/* description = .menu-item-desc (caption, fg-muted) */
+.pop__item:has(br) .hint,
+.pop__item:has(.pop__bar) .hint {
+  font: var(--one-type-caption);
+  letter-spacing: var(--one-type-caption-tracking);
+  color: var(--one-fg-muted);
+}
+
+/* Groups inside such a popup get a subheader instead of the popup header:
+   overline, uppercase, fg-muted (MuiListSubheader). A popup carrying more than
+   one caption is a grouped one — in this prototype only the templates menu
+   («Недельные шаблоны» / «Сменные циклы»); everywhere else the single caption
+   stays .menu-head above. */
+.pop:has(.pop__cap ~ .pop__cap) .pop__cap {
+  padding: 8px 8px 4px;
+  font: var(--one-type-overline);
+  letter-spacing: var(--one-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--one-fg-muted);
+}
+.pop:has(.pop__cap ~ .pop__cap) .pop__cap:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--one-border);
+}
 
 /* ═══ Dialog ════════════════════════════════════════════════════════════════ */
 .modal      { background: var(--one-scrim); }
