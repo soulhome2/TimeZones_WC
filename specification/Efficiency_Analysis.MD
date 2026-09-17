@@ -230,7 +230,7 @@
 
 ## Ссылки
 
-- `schedule_v3.html` — анализируемый прототип
+- `../prototypes/schedule_v3.html` — анализируемый прототип
 - `TimeZones_Prototype_v3.MD` — отличия от предыдущих версий, открытые вопросы по API
 - `Schedule_prototypes_analysis.md` — разбор исходных вариантов и матрица покрытия
 - [Axxon One 3.0 — Time zones](https://docs.axxonsoft.com/confluence/spaces/ONE2025/pages/314537999/Time+zones)

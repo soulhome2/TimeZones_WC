@@ -11,7 +11,7 @@
  * themes with body[data-scheme="light"|"dark"] and its JS may not be touched.
  * Nothing else is changed — values stay verbatim from the design system, so the
  * file can be re-copied from the kit and only these two selectors re-extended.
- * See BRIDGE-README.md → "Decisions taken on my own". */
+ * See ../../specification/BRIDGE-README.md → "Decisions taken on my own". */
 :root,
 [data-theme="light"],
 [data-scheme="light"] {

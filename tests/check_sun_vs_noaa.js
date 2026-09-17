@@ -2,7 +2,8 @@
    If this agrees with schedule_v5.html's sunTimes(), the prototype is right
    and my hand-remembered reference table was wrong. */
 const fs = require('fs');
-const P = 'C:\\Users\\dmitriy.gorbanev\\YandexDisk\\Documents\\Work\\Obsidian\\Repos\\TimeZones_WC\\schedule_v5.html';
+const path = require('path');
+const P = path.resolve(__dirname, '..', 'prototypes', 'schedule_v5.html');
 const h = fs.readFileSync(P, 'utf8');
 const DAY_MIN = 1440;
 const p2 = n => (n < 10 ? '0' : '') + n;
@@ -42,17 +43,32 @@ const dates = ['2026-01-15','2026-03-20','2026-05-01','2026-06-21','2026-08-01',
 const sites = [['Moscow', 55.7558, 37.6173, 3], ['Novosibirsk', 55.0084, 82.9357, 7],
                ['Murmansk', 68.9585, 33.0827, 3]];
 let worst = 0, worstAt = '';
+const worstBySite = {};
 for(const [name, lat, lon, tz] of sites){
+  worstBySite[name] = 0;
   console.log('\n' + name + '  (' + lat + ', ' + lon + ', UTC+' + tz + ')');
   console.log('  date         prototype      NOAA           delta');
   for(const dISO of dates){
-    const a = sunTimes(dISO, lat, lon), b = noaa(dISO, lat, lon, tz);
+    /* both implementations must be asked for the SAME clock: sunTimes defaults to
+       the machine's offset, NOAA is told the site's — pass the site's to both,
+       otherwise the comparison measures the time zone, not the algorithm. */
+    const a = sunTimes(dISO, lat, lon, tz * 60), b = noaa(dISO, lat, lon, tz);
     if(a.polar || !b){ console.log('  ' + dISO + '  ' + (a.polar ? 'polar ' + a.polar : '?') + '   ' + (b ? 'has times' : 'polar')); continue; }
     const dr = a.rise - b.rise, ds = a.set - b.set;
     if(Math.abs(dr) > worst){ worst = Math.abs(dr); worstAt = name + ' ' + dISO + ' rise'; }
     if(Math.abs(ds) > worst){ worst = Math.abs(ds); worstAt = name + ' ' + dISO + ' set'; }
+    worstBySite[name] = Math.max(worstBySite[name], Math.abs(dr), Math.abs(ds));
     console.log(`  ${dISO}  ${hh(a.rise)} ${hh(a.set)}    ${hh(b.rise)} ${hh(b.set)}    ${dr>0?'+':''}${dr} / ${ds>0?'+':''}${ds}`);
   }
 }
+/* Two thresholds, because the simplified equation loses accuracy towards the
+   polar circle and NOAA itself warns about it above 72°. Mid latitudes must
+   agree to the minute; Murmansk at 69°N is allowed the documented few minutes. */
+const LIMIT = { 'Moscow':3, 'Novosibirsk':3, 'Murmansk':8 };
 console.log('\nworst disagreement with NOAA: ' + worst + ' min  (' + worstAt + ')');
-console.log(worst <= 3 ? 'PASS — the two independent algorithms agree' : 'INVESTIGATE');
+const over = Object.entries(worstBySite).filter(([site, v]) => v > LIMIT[site]);
+for(const [site, v] of Object.entries(worstBySite))
+  console.log('  ' + site.padEnd(12) + v + ' min  (limit ' + LIMIT[site] + ')');
+console.log(over.length
+  ? 'INVESTIGATE — ' + over.map(([s, v]) => s + ' ' + v + ' min').join(', ')
+  : 'PASS — the two independent algorithms agree within the documented tolerance');

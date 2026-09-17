@@ -2,7 +2,7 @@
  * exists in schedule_v6.html (a typo in a bridge selector fails silently). */
 const fs = require('fs');
 const path = require('path');
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '..', 'prototypes');
 const bridge = fs.readFileSync(path.join(root, 'bridge.css'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'schedule_v6.html'), 'utf8');
 const theme = fs.readFileSync(path.join(root, 'theme', 'one-psim.css'), 'utf8');

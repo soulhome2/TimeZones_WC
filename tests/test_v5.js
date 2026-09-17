@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-/* `node _dev/test_v5.js [file]` — defaults to v5, so the same suite can be run
-   against a newer prototype without copying it. */
-const P = path.resolve(__dirname, '..', process.argv[2] || 'schedule_v5.html');
+/* `node tests/test_v5.js [file]` — defaults to v5, so the same suite can be run
+   against a newer prototype without copying it. The argument is a file name
+   inside prototypes/, or any path if it resolves on its own. */
+const P = path.resolve(__dirname, '..', 'prototypes', process.argv[2] || 'schedule_v5.html');
 console.log('suite target: ' + path.basename(P));
 const html = fs.readFileSync(P, 'utf8');
 const src = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));

@@ -310,8 +310,8 @@ undo/redo до 60 шагов · клавиатурные сокращения ·
 
 ## Ссылки
 
-- `schedule_v4.html` — прототип v4
-- `schedule_v3.html` — прототип v3
+- `../prototypes/schedule_v4.html` — прототип v4
+- `../prototypes/schedule_v3.html` — прототип v3
 - `Efficiency_Analysis.MD` — анализ, по которому построена v4
 - `TimeZones_Prototype_v3.MD` — отличия v3 от первых двух версий
 - `Schedule_prototypes_analysis.md` — разбор всех вариантов

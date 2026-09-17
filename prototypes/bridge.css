@@ -8,7 +8,7 @@
 
    Markup, JS and media queries are untouched. Every state below comes from §2 or
    from the kit's component layer; nothing is invented. Decisions taken on my own,
-   open questions and rule gaps are listed in BRIDGE-README.md.
+   open questions and rule gaps are listed in ../specification/BRIDGE-README.md.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @import "theme/one-psim.css";
@@ -62,7 +62,7 @@ body {
   --danger: var(--one-danger);
   /* §1 maps success in text/indicators to the -icon step, because --one-success
      (#20D300) is unreadable as text; the same reasoning is applied to warning text
-     further down (own decision, see BRIDGE-README.md). */
+     further down (own decision, see ../specification/BRIDGE-README.md). */
   --status-success: var(--one-success-icon);
 
   /* status tints = feedback triples */
@@ -82,7 +82,7 @@ body {
   --shadow-dialog: var(--one-shadow);
 
   /* radii: controls = radius-control, panels & dialogs = radius-window
-     (kit .btn/.field vs .card; see the §1-vs-kit note in BRIDGE-README.md) */
+     (kit .btn/.field vs .card; see the §1-vs-kit note in ../specification/BRIDGE-README.md) */
   --r-ctl: var(--one-radius-control);
   --r-box: var(--one-radius-window);
   --r-win: var(--one-radius-window);
@@ -442,7 +442,7 @@ select.inp,
 /* ═══ Status text ═══════════════════════════════════════════════════════════
    Warning and success as *text* take the -icon step of their triple: the plain
    hue is 2.2:1 on surface-muted in Light. §1 already does this for success; the
-   same reasoning applied to warning (own decision — BRIDGE-README.md).
+   same reasoning applied to warning (own decision — ../specification/BRIDGE-README.md).
    ═══════════════════════════════════════════════════════════════════════════ */
 .statusbar__msg[data-kind="info"]    { color: var(--one-info); }
 .statusbar__msg[data-kind="success"] { color: var(--one-success-icon); }

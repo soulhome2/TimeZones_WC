@@ -3,7 +3,7 @@
  * from the prototype's own layer, so the numbers cannot drift from the files. */
 const fs = require('fs');
 const path = require('path');
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '..', 'prototypes');
 const theme = fs.readFileSync(path.join(root, 'theme', 'one-psim.css'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'schedule_v6.html'), 'utf8');
 

@@ -230,7 +230,7 @@ en, 12 ч →  Tuesday, September 8, 2026          2:24:58 PM
 
 ## Ссылки
 
-- `schedule_v3.html` — финальный прототип
+- `../prototypes/schedule_v3.html` — финальный прототип
 - `Schedule_prototypes_analysis.md` — подробный разбор всех вариантов, матрица покрытия и оценка
 - [Axxon One 3.0 — Time zones](https://docs.axxonsoft.com/confluence/spaces/ONE2025/pages/314537999/Time+zones)
 - [Axxon One 1.0 — Creating schedules](https://docs.axxonsoft.com/confluence/spaces/one1en/pages/226952566/Creating+schedules)

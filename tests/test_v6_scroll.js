@@ -8,7 +8,8 @@
  */
 const fs = require('fs');
 const path = require('path');
-const P = path.resolve(__dirname, '..', 'schedule_v6.html');
+const proto = path.resolve(__dirname, '..', 'prototypes');
+const P = path.join(proto, 'schedule_v6.html');
 const html = fs.readFileSync(P, 'utf8');
 const src = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
 
@@ -162,9 +163,9 @@ sec('Restyle wiring');
 {
   ok('bridge.css linked after the prototype styles',
     html.indexOf('bridge.css') > html.indexOf('</style>'), 'bridge before </style>');
-  ok('theme files exist', fs.existsSync(path.resolve(__dirname, '..', 'theme', 'one-psim.css'))
-    && fs.existsSync(path.resolve(__dirname, '..', 'theme', 'native.css')));
-  const bridge = fs.readFileSync(path.resolve(__dirname, '..', 'bridge.css'), 'utf8');
+  ok('theme files exist', fs.existsSync(path.join(proto, 'theme', 'one-psim.css'))
+    && fs.existsSync(path.join(proto, 'theme', 'native.css')));
+  const bridge = fs.readFileSync(path.join(proto, 'bridge.css'), 'utf8');
   ok('bridge imports one-psim before native',
     bridge.indexOf('theme/one-psim.css') < bridge.indexOf('theme/native.css')
     && bridge.indexOf('theme/one-psim.css') > -1);
@@ -184,7 +185,7 @@ sec('Restyle wiring');
     .map(s => s.slice('data-scroll="'.length, -1)))].sort();
   ok('exactly the 8 intended scroll keys are emitted',
     emitted.join(',') === 'gridRows,insp,json,main,navtabs,pop,sideList,tabbar', emitted.join(','));
-  const diffV5 = fs.readFileSync(path.resolve(__dirname, '..', 'schedule_v5.html'), 'utf8');
+  const diffV5 = fs.readFileSync(path.join(proto, 'schedule_v5.html'), 'utf8');
   ok('v6 differs from v5 only by the scroll fix and the bridge link',
     Math.abs(html.length - diffV5.length) < 4000,
     'delta ' + (html.length - diffV5.length) + ' bytes');
