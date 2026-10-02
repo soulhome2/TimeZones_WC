@@ -343,6 +343,9 @@ sec('Localisation');
     'navMacros','navAudit','navSettings','grpArchive','grpRoles','grpMacros','grpExport','grpRepl',
     'newScheduleName','newGroupName'];
   const reachable = new Set(Array.from(used).concat(composites, viaArray));
+  /* a key named as a quoted string elsewhere (e.g. in a HELP_KEYS array) is reached too;
+     dictionary entries themselves are bare identifiers, so they never count */
+  Object.keys(X.I18N.en).forEach(k => { if(src.includes(`'${k}'`)) reachable.add(k); });
   viaArray.forEach(k => { if(!src.includes(k)) console.log('     NOTE allowlisted but absent: ' + k); });
   S.order.forEach(id => { const s = S.items[id];
     if(s.nameKey) reachable.add(s.nameKey);

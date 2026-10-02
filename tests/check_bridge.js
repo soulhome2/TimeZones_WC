@@ -59,10 +59,13 @@ const tokens = new Set(['--font','--mono','--bg-canvas','--bg-surface','--bg-mut
   '--fb-danger','--grid-line','--grid-line-strong','--track-bg','--scrim','--shadow-popup',
   '--shadow-dialog','--r-ctl','--r-box','--r-win','--r-pill']);
 
-/* prototype vocabulary: classes and attributes present in CSS or emitted by JS */
-const protoClasses = new Set([...html.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(m => m[1]));
-[...html.matchAll(/class="([^"$]+)"/g)].forEach(m => m[1].split(/\s+/).forEach(c => protoClasses.add(c)));
-[...html.matchAll(/class="([^"]*)\$\{/g)].forEach(m => m[1].split(/\s+/).forEach(c => c && protoClasses.add(c)));
+/* prototype vocabulary: classes present in CSS or emitted by JS. The bridge
+   dresses both v6 and v7, so its selectors are checked against their union. */
+const v7path = path.join(root, 'schedule_v7.html');
+const vocab = html + (fs.existsSync(v7path) ? fs.readFileSync(v7path, 'utf8') : '');
+const protoClasses = new Set([...vocab.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(m => m[1]));
+[...vocab.matchAll(/class="([^"$]+)"/g)].forEach(m => m[1].split(/\s+/).forEach(c => protoClasses.add(c)));
+[...vocab.matchAll(/class="([^"]*)\$\{/g)].forEach(m => m[1].split(/\s+/).forEach(c => c && protoClasses.add(c)));
 
 const missing = [];
 for(const r of rules){

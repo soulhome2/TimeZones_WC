@@ -450,6 +450,37 @@ select.inp,
 .statusbar__msg[data-kind="danger"]  { color: var(--one-danger); }
 .exc__warn { color: var(--one-warning-icon); }
 
+/* ═══ v7 workbench (schedule_v7.html) ═══════════════════════════════════════
+   The rail is side navigation: its current item takes the MuiTab / nav-item
+   ladder (D-031) — nav-selected for glyph and indicator, accent-soft behind.
+   A selected popup item is the MenuItem selected state (§2.9a). Section headers
+   of the inspector are panel titles (heading-sm, §2.2b). Collapsible panels
+   and sections have no DS ladder yet — see BRIDGE-README.md, section 11.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.rail__btn:hover { background: var(--one-nav-hover); }            /* background only — D-022 */
+.rail__btn[aria-pressed="true"] {
+  background: var(--one-accent-soft);
+  color: var(--one-nav-selected-text);
+  box-shadow: inset 2px 0 0 var(--one-nav-selected-text);
+}
+.rail__btn[aria-pressed="true"]:hover { background: var(--one-nav-selected-hover); }
+.pop__item[aria-current="true"] {
+  background: var(--one-accent-soft);
+  box-shadow: inset 3px 0 0 0 var(--one-selected-indicator);
+}
+.pop__item[aria-current="true"]:hover { background: var(--one-accent-soft-hover); }
+.isec__hd {
+  font: var(--one-type-heading-sm);
+  letter-spacing: var(--one-type-heading-sm-tracking);
+  color: var(--one-fg);
+}
+.isec__hd:hover { background: color-mix(in srgb, var(--one-control-hover) 50%, var(--one-surface)); }
+.rail__btn:focus-visible,
+.isec__hd:focus-visible,
+.crumbs__root:focus-visible,
+.sl__item:focus-visible { outline: 2px solid var(--one-focus-ring); outline-offset: -2px; }
+.crumbs__root:hover, button.sl__item:hover { background: var(--one-control-hover); }
+
 /* ═══ Remaining surfaces ════════════════════════════════════════════════════ */
 .splitter::after { background: var(--one-border-strong); }
 /* kbd drew a 2px bottom border in a pale colour; with the ONE PSIM grey that

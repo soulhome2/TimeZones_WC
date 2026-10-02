@@ -71,6 +71,10 @@ console.log('\n== runtime references');
     imports.length === 2 && imports.every(i => fs.existsSync(path.resolve(path.dirname(bridgePath), i))),
     imports.join(', '));
 
+  const v7 = path.join(root, 'prototypes', 'schedule_v7.html');
+  const v7links = [...fs.readFileSync(v7, 'utf8').matchAll(/<link[^>]+href="([^"]+)"/g)].map(m => m[1]);
+  ok('schedule_v7.html links only files that exist',
+    v7links.length && v7links.every(h => fs.existsSync(path.resolve(path.dirname(v7), h))), v7links.join(', '));
   for(const v of ['v3','v4','v5']){
     const p = path.join(root, 'prototypes', `schedule_${v}.html`);
     const t = fs.readFileSync(p, 'utf8');
@@ -82,7 +86,7 @@ console.log('\n== runtime references');
 console.log('\n== test scripts');
 {
   const expect = ['test_v5.js','test_v6_scroll.js','check_bridge.js','check_contrast.js',
-    'check_sun_vs_noaa.js','metrics.js','check_links.js'];
+    'check_sun_vs_noaa.js','metrics.js','check_links.js','ui_density.js','test_v7_layout.js','shots_edge.mjs'];
   const have = fs.readdirSync(path.join(root, 'tests')).sort();
   ok('tests/ holds the expected scripts', expect.sort().join(',') === have.join(','), have.join(','));
   const bad = [];
