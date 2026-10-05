@@ -2,12 +2,12 @@
  * mode, keyboard shortcuts, remembered layout, and — the promise of
  * specification/Efficiency_Analysis_v2.MD — that every action of v6 is still
  * reachable somewhere in v7.
- *   node tests/test_v7_layout.js
+ *   node tests/test_v7_layout.js [file]   — defaults to schedule.html, the newest version
  */
 const fs = require('fs');
 const path = require('path');
 const proto = path.resolve(__dirname, '..', 'prototypes');
-const html = fs.readFileSync(path.join(proto, 'schedule_v7.html'), 'utf8');
+const html = fs.readFileSync(path.join(proto, process.argv[2] || 'schedule.html'), 'utf8');
 const v6 = fs.readFileSync(path.join(proto, 'schedule_v6.html'), 'utf8');
 const src = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
 

@@ -58,12 +58,6 @@ console.log('\n== file paths quoted in the docs');
 /* ── 3. what the prototype and the bridge actually load ───────── */
 console.log('\n== runtime references');
 {
-  const v6 = path.join(root, 'prototypes', 'schedule_v6.html');
-  const html = fs.readFileSync(v6, 'utf8');
-  const links = [...html.matchAll(/<link[^>]+href="([^"]+)"/g)].map(m => m[1]);
-  ok('schedule_v6.html links only files that exist',
-    links.every(h => fs.existsSync(path.resolve(path.dirname(v6), h))), links.join(', '));
-
   const bridgePath = path.join(root, 'prototypes', 'bridge.css');
   const bridge = fs.readFileSync(bridgePath, 'utf8');
   const imports = [...bridge.matchAll(/@import\s+"([^"]+)"/g)].map(m => m[1]);
@@ -71,10 +65,25 @@ console.log('\n== runtime references');
     imports.length === 2 && imports.every(i => fs.existsSync(path.resolve(path.dirname(bridgePath), i))),
     imports.join(', '));
 
-  const v7 = path.join(root, 'prototypes', 'schedule_v7.html');
-  const v7links = [...fs.readFileSync(v7, 'utf8').matchAll(/<link[^>]+href="([^"]+)"/g)].map(m => m[1]);
-  ok('schedule_v7.html links only files that exist',
-    v7links.length && v7links.every(h => fs.existsSync(path.resolve(path.dirname(v7), h))), v7links.join(', '));
+  const vers = fs.readdirSync(path.join(root, 'prototypes'))
+    .map(n => /^schedule_v(\d+)\.html$/.exec(n)).filter(Boolean)
+    .map(m => ({ n:+m[1], file:m[0] })).sort((a, b) => b.n - a.n);
+
+  /* every version that loads the bridge must find what it links */
+  for(const v of ['schedule.html'].concat(vers.filter(x => x.n >= 6).map(x => x.file))){
+    const p = path.join(root, 'prototypes', v);
+    const links = [...fs.readFileSync(p, 'utf8').matchAll(/<link[^>]+href="([^"]+)"/g)].map(m => m[1]);
+    ok(v + ' links only files that exist',
+      links.length && links.every(h => fs.existsSync(path.resolve(path.dirname(p), h))), links.join(', '));
+  }
+
+  /* schedule.html is the stable entry point: always a copy of the newest version */
+  const newest = path.join(root, 'prototypes', vers[0].file);
+  const mirror = path.join(root, 'prototypes', 'schedule.html');
+  ok('schedule.html is a copy of ' + vers[0].file,
+    fs.existsSync(mirror) && fs.readFileSync(mirror, 'utf8') === fs.readFileSync(newest, 'utf8'),
+    fs.existsSync(mirror) ? 'content differs — copy the newest version over it' : 'missing');
+
   for(const v of ['v3','v4','v5']){
     const p = path.join(root, 'prototypes', `schedule_${v}.html`);
     const t = fs.readFileSync(p, 'utf8');

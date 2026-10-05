@@ -25,12 +25,24 @@ const EXPORT = ['S','viewAppbar','viewSide','viewMain','viewInsp','viewRail','vi
 (0, eval)(src + '\n;globalThis.X={' + EXPORT.map(k => k + ':typeof ' + k + '!=="undefined"?' + k + ':undefined').join(',') + '};');
 const X = globalThis.X, S = X.S;
 
+/* Everything the mouse or the keyboard can act on, not only form controls:
+ * calendar cells, grid rows, blocks and their handles are plain divs. */
+const TAG = /<([a-z]+)\b([^>]*)>/g;
+const ACTIONABLE = /\bdata-act=|\bdata-track=|\bdata-blk=|\bdata-h=|\brole="option"|\btabindex="0"/;
+const targets = strip => {
+  let n = 0, m;
+  TAG.lastIndex = 0;
+  while((m = TAG.exec(strip)))
+    if(/^(button|input|select|textarea)$/.test(m[1]) || ACTIONABLE.test(m[2])) n++;
+  return n;
+};
 const count = h => {
   const strip = h.replace(/<option[\s\S]*?<\/option>/g, '');
   return {
     buttons: (strip.match(/<button\b/g) || []).length,
     inputs:  (strip.match(/<input\b/g) || []).length,
     selects: (strip.match(/<select\b/g) || []).length,
+    targets: targets(strip),
     hints:   (strip.match(/class="hint[ "]/g) || []).length,
     words:   strip.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ').split(/\s+/).filter(w => /\p{L}/u.test(w)).length
   };
@@ -81,16 +93,17 @@ function hoverOnly(){
 for(const [label, key] of [['Weekly «Business hours»', 'sc_biz'], ['Shift cycle «Guard crews 2/2»', 'sc_shift']]){
   const z = zones(key);
   const hidden = hoverOnly();
-  const tot = { buttons:0, inputs:0, selects:0, hints:0, words:0 };
+  const tot = { buttons:0, inputs:0, selects:0, targets:0, hints:0, words:0 };
   console.log('\n' + label + ' — ' + path.basename(P));
-  console.log('  zone               btn  inp  sel  hint  words');
+  console.log('  zone               btn  inp  sel  tgt  hint  words');
   for(const [n, c] of Object.entries(z)){
     for(const k in tot) tot[k] += c[k];
     console.log('  ' + n.padEnd(18) + String(c.buttons).padStart(4) + String(c.inputs).padStart(5)
-      + String(c.selects).padStart(5) + String(c.hints).padStart(6) + String(c.words).padStart(7));
+      + String(c.selects).padStart(5) + String(c.targets).padStart(5) + String(c.hints).padStart(6) + String(c.words).padStart(7));
   }
   console.log('  ' + 'TOTAL'.padEnd(18) + String(tot.buttons).padStart(4) + String(tot.inputs).padStart(5)
-    + String(tot.selects).padStart(5) + String(tot.hints).padStart(6) + String(tot.words).padStart(7)
+    + String(tot.selects).padStart(5) + String(tot.targets).padStart(5) + String(tot.hints).padStart(6) + String(tot.words).padStart(7)
     + '   → ' + (tot.buttons + tot.inputs + tot.selects) + ' controls, '
-    + (tot.buttons + tot.inputs + tot.selects - hidden) + ' visible at rest (' + hidden + ' on hover)');
+    + (tot.buttons + tot.inputs + tot.selects - hidden) + ' visible at rest (' + hidden + ' on hover), '
+    + tot.targets + ' targets');
 }

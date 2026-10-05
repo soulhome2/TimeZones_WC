@@ -60,9 +60,9 @@ const tokens = new Set(['--font','--mono','--bg-canvas','--bg-surface','--bg-mut
   '--shadow-dialog','--r-ctl','--r-box','--r-win','--r-pill']);
 
 /* prototype vocabulary: classes present in CSS or emitted by JS. The bridge
-   dresses both v6 and v7, so its selectors are checked against their union. */
-const v7path = path.join(root, 'schedule_v7.html');
-const vocab = html + (fs.existsSync(v7path) ? fs.readFileSync(v7path, 'utf8') : '');
+   dresses every version from v6 on, so its selectors are checked against their union. */
+const vocab = html + fs.readdirSync(root).filter(n => /^schedule_v(?:[6-9]|\d\d)\.html$/.test(n))
+  .map(n => fs.readFileSync(path.join(root, n), 'utf8')).join('');
 const protoClasses = new Set([...vocab.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(m => m[1]));
 [...vocab.matchAll(/class="([^"$]+)"/g)].forEach(m => m[1].split(/\s+/).forEach(c => protoClasses.add(c)));
 [...vocab.matchAll(/class="([^"]*)\$\{/g)].forEach(m => m[1].split(/\s+/).forEach(c => c && protoClasses.add(c)));
